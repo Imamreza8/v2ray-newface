@@ -1,0 +1,96 @@
+# Beginner workflow: builds an APK of v2rayNG 2.3.14 + the spatial/top-configs patch, entirely on GitHub.
+# Put this file in your fork as .github/workflows/build-spatial-apk.yml and upload
+# v2rayNG-2.3.14-spatial-top.patch to the ROOT of the same fork. Then: Actions -> Build spatial APK -> Run workflow.
+name: Build spatial APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout upstream v2rayNG 2.3.14 (with submodules)
+      uses: actions/checkout@v7
+      with:
+        repository: 2dust/v2rayNG
+        ref: 2.3.14
+        submodules: 'recursive'
+        fetch-depth: '0'
+
+    - name: Checkout your fork (only to read the patch file)
+      uses: actions/checkout@v7
+      with:
+        path: mine
+
+    - name: Apply the patch
+      run: |
+        test -f mine/v2rayNG-2.3.14-spatial-top.patch || { echo "Patch file not found in the root of your fork"; exit 1; }
+        git apply --check mine/v2rayNG-2.3.14-spatial-top.patch
+        git apply mine/v2rayNG-2.3.14-spatial-top.patch
+        echo "Patch applied"
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v4
+      with:
+        log-accepted-android-sdk-licenses: false
+        cmdline-tools-version: '14742923'
+        packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
+
+    - name: Install NDK
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          --channel=0 \
+          --install "ndk;30.0.16248370"
+        echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> $GITHUB_ENV
+        sed -i '10i\
+        \
+            ndkVersion = "30.0.16248370"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
+
+    - name: Build libhevtun
+      run: bash compile-hevtun.sh
+
+    - name: Copy libhevtun
+      run: cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
+
+    - name: Fetch AndroidLibXrayLite tag
+      run: |
+        pushd AndroidLibXrayLite
+        CURRENT_TAG=$(git describe --tags --abbrev=0)
+        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
+        popd
+
+    - name: Download libv2ray
+      uses: robinraju/release-downloader@v1.13
+      with:
+        repository: '2dust/AndroidLibXrayLite'
+        tag: ${{ env.CURRENT_TAG }}
+        fileName: 'libv2ray.aar'
+        out-file-path: V2rayNG/app/libs/
+
+    - name: Setup Java
+      uses: actions/setup-java@v6.1.0
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Unit tests (failures here do not stop the APK)
+      continue-on-error: true
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew :app:testFdroidDebugUnitTest
+
+    - name: Build APK (fdroid debug, installs next to the official app)
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew :app:assembleFdroidDebug
+
+    - name: Upload APKs
+      uses: actions/upload-artifact@v7
+      with:
+        name: spatial-apk
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
