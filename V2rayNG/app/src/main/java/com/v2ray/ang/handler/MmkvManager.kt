@@ -27,6 +27,7 @@ import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.dto.entities.WebDavConfig
 import com.v2ray.ang.util.JsonUtil
+import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -371,6 +372,7 @@ object MmkvManager {
                 )
             }
             if (replacedServers.isEmpty()) return@withProfileIndexLock
+            carryOverTestHistory(replacedServers, profiles)
 
             val protectedServer = replacementSelection ?: previousSelection
             val referencedByOtherGroups = decodeServersReferencedByOtherGroups(subscriptionId)
@@ -481,13 +483,81 @@ object MmkvManager {
      * @param guid The server GUID.
      * @param testResult The test delay in milliseconds.
      */
-    fun encodeServerTestDelayMillis(guid: String, testResult: Long) {
+    fun encodeServerTestDelayMillis(guid: String, testResult: Long, isRealPing: Boolean = true) {
         if (guid.isBlank()) {
             return
         }
         val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
         aff.testDelayMillis = testResult
+        aff.testTime = System.currentTimeMillis()
+        if (isRealPing) {
+            val now = System.currentTimeMillis()
+            aff.realDelayMillis = testResult
+            aff.lastTestTime = now
+            aff.testCount += 1
+            if (testResult > 0L) {
+                aff.successCount += 1
+                aff.lastSuccessTime = now
+                // Welford update: mean and spread of successful delays (jitter).
+                aff.delaySamples += 1
+                val deviation = testResult - aff.delayMean
+                aff.delayMean += deviation / aff.delaySamples
+                aff.delayM2 += deviation * (testResult - aff.delayMean)
+            }
+            // Keep the history recent: once it is long, halve it so old results fade out.
+            if (aff.testCount > MAX_TEST_HISTORY) {
+                aff.testCount = (aff.testCount + 1) / 2
+                aff.successCount = (aff.successCount + 1) / 2
+                aff.delaySamples = (aff.delaySamples + 1) / 2
+                aff.delayM2 /= 2.0
+            }
+        }
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
+    private const val MAX_TEST_HISTORY = 20
+
+    /** Remembers the exit-IP country seen when the user tested this config while connected to it. */
+    fun encodeServerExitCountry(guid: String, countryCode: String) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        aff.exitCountry = countryCode
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
+    /**
+     * A subscription refresh publishes new GUIDs. Copy the test history from a replaced profile to the
+     * replacement that has the same connection identity (remarks and description are ignored, so a
+     * rename keeps the history; any connection-affecting change gets no history).
+     * Best effort: a failure only loses cached history and never blocks the update.
+     */
+    private fun carryOverTestHistory(replacedServers: List<String>, profiles: Map<String, ProfileItem>) {
+        try {
+            val oldProfiles = LinkedHashMap<String, ProfileItem>()
+            replacedServers.forEach { guid ->
+                if (decodeServerAffiliationInfo(guid) == null) return@forEach
+                decodeServerConfig(guid)?.let { oldProfiles[guid] = it }
+            }
+            if (oldProfiles.isEmpty()) return
+            ProfileReplacement.findHistoryCarryOver(oldProfiles, profiles).forEach { (newGuid, oldGuid) ->
+                decodeServerAffiliationInfo(oldGuid)?.let { serverAffStorage.encode(newGuid, JsonUtil.toJson(it)) }
+            }
+        } catch (e: Exception) {
+            LogUtil.e(TAG, "Failed to carry over test history after subscription update", e)
+        }
+    }
+
+    /**
+     * Reads the test data of every server that has any. Only tested servers have an entry, so this
+     * is much smaller than the full server list on big subscriptions.
+     */
+    fun decodeAllServerAffiliations(): Map<String, ServerAffiliationInfo> {
+        val keys = serverAffStorage.allKeys() ?: return emptyMap()
+        val result = HashMap<String, ServerAffiliationInfo>(keys.size)
+        for (key in keys) {
+            decodeServerAffiliationInfo(key)?.let { result[key] = it }
+        }
+        return result
     }
 
     /**

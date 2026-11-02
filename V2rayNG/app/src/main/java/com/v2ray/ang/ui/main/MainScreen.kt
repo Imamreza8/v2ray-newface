@@ -24,12 +24,18 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -49,6 +55,34 @@ fun MainScreen(
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
+    val topState by mainViewModel.topState.collectAsStateWithLifecycle()
+    var showTopSheet by remember { mutableStateOf(false) }
+    // With the neon theme the app opens on the spatial home; the full config list (the classic screen)
+    // opens from the location card and closes with Back.
+    val homeMode = LocalSpatialTheme.current
+    var showFullList by rememberSaveable { mutableStateOf(false) }
+    // The header folds away while the list is scrolled down and returns when scrolling back up (visual only).
+    var headerCollapsedByScroll by remember { mutableStateOf(false) }
+    val headerScrollConnection = remember {
+        object : NestedScrollConnection {
+            private var accumulated = 0f
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                if (dy != 0f) {
+                    if (accumulated != 0f && (dy > 0f) != (accumulated > 0f)) accumulated = 0f
+                    accumulated += dy
+                    if (accumulated < -HEADER_SCROLL_THRESHOLD_PX) {
+                        headerCollapsedByScroll = true
+                    } else if (accumulated > HEADER_SCROLL_THRESHOLD_PX) {
+                        headerCollapsedByScroll = false
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) { onAction(MainAction.RefreshTop) }
 
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -136,6 +170,25 @@ fun MainScreen(
     if (shareQRCodeBitmap != null) {
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
+    if (showTopSheet) {
+        TopConfigsSheet(
+            topState = topState,
+            selectedGuid = selectedGuid,
+            isTesting = uiState.isTesting,
+            onAction = onAction,
+            onDismiss = { showTopSheet = false },
+        )
+    }
+    uiState.expandProposal?.let { proposal ->
+        ExpandDialog(proposal = proposal, onAction = onAction)
+    }
+    uiState.autoSelectProposal?.let { proposal ->
+        AutoSelectDialog(
+            proposal = proposal,
+            isRunning = isRunning,
+            onAction = onAction,
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -149,6 +202,20 @@ fun MainScreen(
             )
         }
     ) {
+        if (homeMode && !showFullList) {
+            SpatialHome(
+                uiState = uiState,
+                statusText = displayText,
+                onAction = onAction,
+                onOpenMenu = { scope.launch { drawerState.open() } },
+                onOpenList = { showFullList = true },
+                onOpenTop = {
+                    onAction(MainAction.RefreshTop)
+                    showTopSheet = true
+                },
+            )
+        } else {
+        if (homeMode) BackHandler { showFullList = false }
         Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
@@ -202,7 +269,19 @@ fun MainScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    if (groups.size > 1) {
+                    if (!homeMode) SpatialHeader(
+                        uiState = uiState,
+                        statusText = displayText,
+                        topCount = topState.entries.size,
+                        onAction = onAction,
+                        onOpenTop = {
+                            onAction(MainAction.RefreshTop)
+                            showTopSheet = true
+                        },
+                        collapsedByScroll = headerCollapsedByScroll,
+                        onExpandRequested = { headerCollapsedByScroll = false },
+                    )
+                    if (!uiState.simpleMode && groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
                             selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
@@ -218,9 +297,9 @@ fun MainScreen(
                         )
                     }
 
-                    HorizontalPager(
+                    if (!uiState.simpleMode) HorizontalPager(
                         state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().nestedScroll(headerScrollConnection),
                         userScrollEnabled = true,
                         beyondViewportPageCount = 1,
                         key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
@@ -259,5 +338,8 @@ fun MainScreen(
                 }
             }
         }
+        }
     }
 }
+
+private const val HEADER_SCROLL_THRESHOLD_PX = 120f

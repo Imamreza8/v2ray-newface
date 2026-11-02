@@ -18,8 +18,14 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
+import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SubscriptionInfoParser
+import com.v2ray.ang.handler.TopConfigManager
+import com.v2ray.ang.dto.UrlContentRequest
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ThemeManager
+import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -48,10 +54,10 @@ private fun applyTestDelayResults(
     updates: Map<String, Long>,
 ): List<ServersCache> = servers.map { server ->
     val delayMillis = updates[server.guid]
-    if (delayMillis == null || delayMillis == server.testDelayMillis) {
+    if (delayMillis == null) {
         server
     } else {
-        server.copy(testDelayMillis = delayMillis)
+        server.copy(testDelayMillis = delayMillis, testTime = System.currentTimeMillis())
     }
 }
 
@@ -60,10 +66,10 @@ private fun applyTestDelayResultsToRows(
     updates: Map<String, Long>,
 ): List<ServerRowUiModel> = rows.map { row ->
     val delayMillis = updates[row.guid]
-    if (delayMillis == null || delayMillis == row.testDelayMillis) {
+    if (delayMillis == null) {
         row
     } else {
-        row.copy(testDelayMillis = delayMillis)
+        row.copy(testDelayMillis = delayMillis, testTime = System.currentTimeMillis())
     }
 }
 
@@ -82,10 +88,45 @@ class MainViewModel(
             selectedGroupId = dataSource.getSelectedSubscriptionId(),
             selectedGuid = dataSource.getSelectServer(),
             confirmRemove = dataSource.getConfirmRemove(),
-            doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+            doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+            spatialExpanded = MmkvManager.decodeSettingsBool(AppConfig.PREF_SPATIAL_EXPANDED, true),
+            // Explicit choice wins; otherwise follow the system "remove animations" setting.
+            reduceMotion = MmkvManager.decodeSettingsString(AppConfig.PREF_REDUCE_MOTION)?.let { it == "1" }
+                ?: animationsDisabledBySystem(application),
+            simpleMode = MmkvManager.decodeSettingsBool(AppConfig.PREF_SIMPLE_MODE, false),
+            speedEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, false),
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    // ---------- Top configs / auto-select ----------
+    private val _topState = MutableStateFlow(
+        TopUiState(
+            limit = TopConfigManager.getLimit(),
+            maxDelayMillis = TopConfigManager.getMaxDelayMillis(),
+        )
+    )
+    internal val topState: StateFlow<TopUiState> = _topState.asStateFlow()
+    private var topLoadJob: Job? = null
+
+    private class AutoSelectRun(val guids: List<String>, val startedAt: Long)
+
+    @Volatile
+    private var pendingAutoSelect: AutoSelectRun? = null
+
+    // Bulk-test run tracking (main thread only): which configs were asked, which already answered.
+    private var runGuids: List<String> = emptyList()
+    private var runOnlyTcp = false
+    private val runDone = HashSet<String>()
+    private var runOk = 0
+    private var runFailed = 0
+    private var resumeGuids: List<String> = emptyList()
+    private var speedTestJob: Job? = null
+
+    // Auto-select bookkeeping (main thread only)
+    private val autoSelectTried = HashSet<String>()
+    private var expansionBatch: List<String> = emptyList()
+    private var smartConnectRequested = false
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -104,6 +145,7 @@ class MainViewModel(
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
+    private var selectedInfoJob: Job? = null
     private var testResultFlushJob: Job? = null
     private val pendingTestResults = linkedMapOf<String, Long>()
 
@@ -116,6 +158,7 @@ class MainViewModel(
     init {
         collectServiceEvents()
         setupGroupTab()
+        refreshSelectedInfo()
     }
 
     private fun collectServiceEvents() {
@@ -148,6 +191,18 @@ class MainViewModel(
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
                 _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
+                learnExitCountry(event.result)
+            }
+
+            is MainServiceEvent.Traffic -> {
+                if (!uiState.value.isRunning) return
+                _uiState.update {
+                    it.copy(
+                        trafficDownBps = event.speed.downlinkBytesPerSec,
+                        trafficUpBps = event.speed.uplinkBytesPerSec,
+                        trafficHistory = (it.trafficHistory + event.speed.downlinkBytesPerSec).takeLast(TRAFFIC_HISTORY_SIZE),
+                    )
+                }
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
@@ -178,6 +233,7 @@ class MainViewModel(
 
             is MainServiceEvent.MeasureConfigCancelled -> {
                 if (testRequests.completeBulk(event.requestId) != null) {
+                    pendingAutoSelect = null
                     cancelPendingTestResults()
                     resetTestStatus()
                 }
@@ -186,6 +242,9 @@ class MainViewModel(
     }
 
     private fun queueTestResult(result: RealPingResult, request: MainTestRequests.Bulk) {
+        if (runDone.add(result.guid)) {
+            if (result.delayMillis > 0L) runOk++ else runFailed++
+        }
         pendingTestResults[result.guid] = result.delayMillis
         if (testResultFlushJob?.isActive == true) return
 
@@ -209,6 +268,7 @@ class MainViewModel(
             }
             drained
         }
+        publishRunStats()
         if (updates.isEmpty()) return
         if (testRequests.bulk?.id != request.id) return
         mutableServerGroupState(request.groupId).update { current ->
@@ -279,7 +339,12 @@ class MainViewModel(
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
             MainAction.TestAllServers -> testAllRealPing(true)
             MainAction.TestRealAllServers -> testAllRealPing()
-            MainAction.CancelTesting -> cancelAllPing()
+            MainAction.CancelTesting -> cancelByUser()
+            MainAction.ResumeTesting -> startGuidTest(resumeGuids, runOnlyTcp)
+            // The theme itself is observed from ThemeManager by AppTheme, so only persist the choice here.
+            is MainAction.SetSpatialTheme ->
+                viewModelScope.launch(ioDispatcher) { ThemeManager.setSpatialThemeEnabled(action.enabled) }
+            MainAction.SpeedTestCurrent -> speedTestCurrent()
             MainAction.RemoveAllServers -> removeAllServerAsync()
             MainAction.RemoveDuplicateServers -> removeDuplicateServerAsync()
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
@@ -293,6 +358,43 @@ class MainViewModel(
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
             MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.SetSpatialExpanded -> {
+                _uiState.update { it.copy(spatialExpanded = action.expanded) }
+                viewModelScope.launch(ioDispatcher) {
+                    MmkvManager.encodeSettings(AppConfig.PREF_SPATIAL_EXPANDED, action.expanded)
+                }
+            }
+            is MainAction.SetReduceMotion -> {
+                _uiState.update { it.copy(reduceMotion = action.reduce) }
+                viewModelScope.launch(ioDispatcher) {
+                    MmkvManager.encodeSettings(AppConfig.PREF_REDUCE_MOTION, if (action.reduce) "1" else "0")
+                }
+            }
+            is MainAction.SetSimpleMode -> {
+                _uiState.update { it.copy(simpleMode = action.enabled) }
+                viewModelScope.launch(ioDispatcher) {
+                    MmkvManager.encodeSettings(AppConfig.PREF_SIMPLE_MODE, action.enabled)
+                }
+            }
+            MainAction.SmartConnect -> {
+                smartConnectRequested = true
+                autoSelect()
+            }
+            MainAction.ConfirmExpand -> confirmExpand()
+            MainAction.DismissExpand -> {
+                expansionBatch = emptyList()
+                _uiState.update { it.copy(expandProposal = null) }
+            }
+            MainAction.RefreshTop -> loadTop()
+            is MainAction.SetTopFilter -> setTopFilter(
+                action.limit, action.maxDelayMillis, action.countryCode, action.countrySource
+            )
+            MainAction.TestTopConfigs -> testTopConfigs()
+            MainAction.AutoSelect -> {
+                smartConnectRequested = false
+                autoSelect()
+            }
+            MainAction.DismissAutoSelect -> _uiState.update { it.copy(autoSelectProposal = null) }
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -313,7 +415,8 @@ class MainViewModel(
             is MainAction.EditServer,
             is MainAction.ShareClipboard,
             is MainAction.ShareFullContent,
-            is MainAction.OpenSubscriptionLink -> {
+            is MainAction.OpenSubscriptionLink,
+            is MainAction.ApplyAutoSelect -> {
                 // Handled by Activity via its onAction lambda
             }
         }
@@ -339,7 +442,8 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 confirmRemove = dataSource.getConfirmRemove(),
-                doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+                doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+                speedEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED, false),
             )
         }
     }
@@ -353,7 +457,8 @@ class MainViewModel(
             ServersCache(
                 guid = guid,
                 profile = profile.copy(),
-                testDelayMillis = affiliation?.testDelayMillis ?: 0L
+                testDelayMillis = affiliation?.testDelayMillis ?: 0L,
+                testTime = affiliation?.testTime ?: 0L
             )
         }
 
@@ -477,6 +582,7 @@ class MainViewModel(
                         selectedGuid = dataSource.getSelectServer(),
                     )
                 }
+                refreshSelectedInfo()
                 groups.forEach { mutableServerGroupState(it.id) }
 
                 if (groups.isEmpty()) {
@@ -779,10 +885,33 @@ class MainViewModel(
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid) }
+        refreshSelectedInfo()
     }
 
     fun refreshSelectedGuid() {
         _uiState.update { it.copy(selectedGuid = dataSource.getSelectServer()) }
+        refreshSelectedInfo()
+    }
+
+    /** Loads name + last delay of the selected server (by GUID) off the main thread. */
+    private fun refreshSelectedInfo() {
+        selectedInfoJob?.cancel()
+        selectedInfoJob = viewModelScope.launch(ioDispatcher) {
+            val guid = uiState.value.selectedGuid
+            val info = if (guid == null) {
+                null
+            } else {
+                dataSource.decodeServerConfig(guid)?.let { profile ->
+                    val affiliation = dataSource.decodeAffiliationInfo(guid)
+                    SelectedServerInfo(
+                        remarks = profile.remarks,
+                        delayMillis = affiliation?.testDelayMillis ?: 0L,
+                        exitCountry = TopConfigManager.normalizeCountryCode(affiliation?.exitCountry),
+                    )
+                }
+            }
+            _uiState.update { it.copy(selectedInfo = info) }
+        }
     }
 
     fun removeServerAndRefresh(guid: String) {
@@ -816,6 +945,7 @@ class MainViewModel(
 
     // ---------- Testing ----------
     fun cancelAllPing() {
+        pendingAutoSelect = null
         bulkTestJob?.cancel()
         bulkTestJob = null
         testRequests.cancelBulk()
@@ -843,18 +973,9 @@ class MainViewModel(
             return
         }
         val serverGuids = servers.map { it.guid }
-        mutableServerGroupState(groupId).update { current ->
-            current.copy(
-                servers = current.servers.map { server ->
-                    if (server.testDelayMillis == 0L) server
-                    else server.copy(testDelayMillis = 0L)
-                },
-                rows = current.rows.map { row ->
-                    if (row.testDelayMillis == 0L) row
-                    else row.copy(testDelayMillis = 0L)
-                }
-            )
-        }
+        beginRun(serverGuids, onlyTcp)
+        // Previous results are kept (not reset to "untested"): each one is replaced as soon as its
+        // new result arrives, and a cancelled run does not throw the old results away.
         val request = testRequests.beginBulk(groupId)
         val message = TestServiceMessage(
             key = AppConfig.MSG_MEASURE_CONFIG_START,
@@ -869,19 +990,254 @@ class MainViewModel(
             )
         }
         bulkTestJob = viewModelScope.launch {
-            withContext(ioDispatcher) {
-                dataSource.clearAllTestDelayResults(serverGuids)
-                val resetGuids = serverGuids.toHashSet()
-                cacheMutex.withLock {
-                    groupDataCache[groupId]?.let { cached ->
-                        groupDataCache[groupId] = cached.map { server ->
-                            if (server.guid !in resetGuids || server.testDelayMillis == 0L) server
-                            else server.copy(testDelayMillis = 0L)
-                        }
-                    }
-                }
-            }
             dataSource.sendMsg2TestService(message, request.id)
+        }
+    }
+
+    /** Real-pings exactly [guids] (any group). Group auto-remove/auto-sort do not apply (no subscriptionId). */
+    private fun startGuidTest(guids: List<String>, onlyTcp: Boolean = false) {
+        cancelAllPing()
+        if (guids.isEmpty()) return
+        beginRun(guids, onlyTcp)
+        val request = testRequests.beginBulk(uiState.value.selectedGroupId)
+        val message = TestServiceMessage(
+            key = AppConfig.MSG_MEASURE_CONFIG_START,
+            subscriptionId = "",
+            serverGuids = guids,
+            onlyTcp = onlyTcp
+        )
+        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        bulkTestJob = viewModelScope.launch {
+            dataSource.sendMsg2TestService(message, request.id)
+        }
+    }
+
+    // ---------- Top configs ----------
+    private fun loadTop() = loadTop(_topState.value)
+
+    private fun loadTop(target: TopUiState) {
+        topLoadJob?.cancel()
+        _topState.update {
+            it.copy(
+                limit = target.limit,
+                maxDelayMillis = target.maxDelayMillis,
+                countryCode = target.countryCode,
+                countrySource = target.countrySource,
+                isLoading = true,
+            )
+        }
+        topLoadJob = viewModelScope.launch(ioDispatcher) {
+            try {
+                val entries = TopConfigManager.loadTop(
+                    limit = target.limit,
+                    maxDelayMillis = target.maxDelayMillis,
+                    countryCode = target.countryCode,
+                    countrySource = target.countrySource,
+                )
+                _topState.update { it.copy(entries = entries, isLoading = false) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to load top configs", e)
+                _topState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private fun setTopFilter(
+        limit: Int,
+        maxDelayMillis: Long,
+        countryCode: String?,
+        countrySource: TopConfigManager.CountrySource,
+    ) {
+        viewModelScope.launch(ioDispatcher) { TopConfigManager.saveSettings(limit, maxDelayMillis) }
+        loadTop(
+            TopUiState(
+                limit = limit,
+                maxDelayMillis = maxDelayMillis,
+                countryCode = countryCode,
+                countrySource = countrySource,
+            )
+        )
+    }
+
+    /** Re-tests only the current top list (fast path before a full test of every config). */
+    private fun testTopConfigs() {
+        val filter = _topState.value
+        viewModelScope.launch {
+            val top = withContext(ioDispatcher) {
+                TopConfigManager.loadTop(filter.limit, filter.maxDelayMillis, filter.countryCode, filter.countrySource)
+            }
+            if (top.isEmpty()) {
+                toast(R.string.top_none)
+                return@launch
+            }
+            startGuidTest(top.map { it.guid })
+        }
+    }
+
+    /**
+     * Re-tests the top list, then *proposes* the fastest config that answered in this run.
+     * Nothing is selected or restarted until the user confirms the proposal.
+     */
+    private fun autoSelect() {
+        val filter = _topState.value
+        viewModelScope.launch {
+            val top = withContext(ioDispatcher) {
+                TopConfigManager.loadTop(filter.limit, filter.maxDelayMillis, filter.countryCode, filter.countrySource)
+            }
+            if (top.isEmpty()) {
+                // No stored result yet (or none under the limit): offer to test a batch instead of stopping.
+                autoSelectTried.clear()
+                proposeExpansion()
+                return@launch
+            }
+            val guids = top.map { it.guid }
+            autoSelectTried.clear()
+            autoSelectTried.addAll(guids)
+            val startedAt = System.currentTimeMillis()
+            startGuidTest(guids)
+            pendingAutoSelect = AutoSelectRun(guids, startedAt)
+        }
+    }
+
+    /**
+     * Nothing in the tried set answered. Offer the next batch from the current group: never-tested configs
+     * first, then ones that answered before (fastest first), failed ones last. Nothing is tested until the
+     * user confirms.
+     */
+    private fun proposeExpansion() {
+        val batch = currentServers()
+            .filter { it.guid !in autoSelectTried }
+            .sortedWith(
+                compareBy<ServersCache>(
+                    { server ->
+                        when {
+                            server.testDelayMillis == 0L -> 0
+                            server.testDelayMillis > 0L -> 1
+                            else -> 2
+                        }
+                    },
+                    { server -> if (server.testDelayMillis > 0L) server.testDelayMillis else 0L },
+                    { server -> server.testTime },
+                )
+            )
+            .take(EXPANSION_BATCH_SIZE)
+            .map { it.guid }
+        if (batch.isEmpty()) {
+            smartConnectRequested = false
+            toast(R.string.top_auto_select_none)
+            return
+        }
+        expansionBatch = batch
+        _uiState.update { it.copy(expandProposal = ExpandProposal(batch.size)) }
+    }
+
+    private fun confirmExpand() {
+        val batch = expansionBatch
+        expansionBatch = emptyList()
+        _uiState.update { it.copy(expandProposal = null) }
+        if (batch.isEmpty()) return
+        autoSelectTried.addAll(batch)
+        val startedAt = System.currentTimeMillis()
+        startGuidTest(batch)
+        pendingAutoSelect = AutoSelectRun(batch, startedAt)
+    }
+
+    private fun finishAutoSelect(run: AutoSelectRun) {
+        viewModelScope.launch {
+            val best = withContext(ioDispatcher) {
+                val infos = run.guids.mapNotNull { guid ->
+                    dataSource.decodeAffiliationInfo(guid)?.let { guid to it }
+                }.toMap()
+                TopConfigManager.pickBestFresh(infos, run.guids, run.startedAt)
+            }
+            if (best == null) {
+                proposeExpansion()
+                return@launch
+            }
+            val remarks = withContext(ioDispatcher) {
+                dataSource.decodeServerConfig(best.first)?.remarks.orEmpty()
+            }
+            _uiState.update {
+                it.copy(
+                    autoSelectProposal = AutoSelectProposal(best.first, remarks, best.second, connect = smartConnectRequested),
+                    expandProposal = null,
+                )
+            }
+        }
+    }
+
+    private fun beginRun(guids: List<String>, onlyTcp: Boolean) {
+        runGuids = guids
+        runOnlyTcp = onlyTcp
+        runDone.clear()
+        runOk = 0
+        runFailed = 0
+        resumeGuids = emptyList()
+        _uiState.update { it.copy(runStats = TestRunStats(total = guids.size), resumableCount = 0) }
+    }
+
+    private fun publishRunStats() {
+        val stats = TestRunStats(total = runGuids.size, done = runDone.size, ok = runOk, failed = runFailed)
+        _uiState.update { if (it.runStats == stats) it else it.copy(runStats = stats) }
+    }
+
+    /** User pressed cancel: remember which configs of this run never answered, so the run can be resumed. */
+    private fun cancelByUser() {
+        val remaining = if (testRequests.bulk != null) runGuids.filter { it !in runDone } else emptyList()
+        cancelAllPing()
+        resumeGuids = remaining
+        publishRunStats()
+        _uiState.update { it.copy(resumableCount = remaining.size) }
+    }
+
+    /** Keeps the exit-IP country (two-letter code only) of the connected config for the country filter. */
+    private fun learnExitCountry(result: ConnectionTestResult) {
+        if (result.delayMillis < 0L) return
+        val guid = uiState.value.selectedGuid ?: return
+        val code = TopConfigManager.normalizeCountryCode(result.country) ?: return
+        viewModelScope.launch(ioDispatcher) { MmkvManager.encodeServerExitCountry(guid, code) }
+    }
+
+    /**
+     * Downloads about 5 MB through the connected proxy and reports the speed. Runs only on request,
+     * only while connected, and contacts the host in [AppConfig.SPEED_TEST_URL].
+     */
+    private fun speedTestCurrent() {
+        if (!uiState.value.isRunning || uiState.value.speedTest == SpeedTestState.Running) return
+        speedTestJob?.cancel()
+        _uiState.update { it.copy(speedTest = SpeedTestState.Running) }
+        speedTestJob = viewModelScope.launch(ioDispatcher) {
+            val measured = try {
+                val httpPort = SettingsManager.getHttpPort()
+                if (httpPort == 0) {
+                    null
+                } else {
+                    HttpUtil.measureDownload(
+                        UrlContentRequest(
+                            url = AppConfig.SPEED_TEST_URL,
+                            timeout = 10_000,
+                            httpPort = httpPort,
+                            proxyUsername = SettingsManager.getSocksUsername(),
+                            proxyPassword = SettingsManager.getSocksPassword(),
+                        ),
+                        AppConfig.SPEED_TEST_MAX_BYTES,
+                        SPEED_TEST_MAX_MILLIS,
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Speed test failed", e)
+                null
+            }
+            val state = if (measured == null || measured.first <= 0L) {
+                SpeedTestState.Failed
+            } else {
+                SpeedTestState.Result(megabitsPerSecond(measured.first, measured.second), measured.first)
+            }
+            _uiState.update { it.copy(speedTest = state) }
         }
     }
 
@@ -901,6 +1257,14 @@ class MainViewModel(
     private fun onTestsFinished(requestId: String) {
         if (testRequests.completeBulk(requestId) == null) return
         resetTestStatus()
+        val autoSelectRun = pendingAutoSelect
+        pendingAutoSelect = null
+        resumeGuids = emptyList()
+        publishRunStats()
+        _uiState.update { it.copy(resumableCount = 0) }
+        if (autoSelectRun != null) finishAutoSelect(autoSelectRun)
+        loadTop()
+        refreshSelectedInfo()
         viewModelScope.launch(ioDispatcher) {
             cacheMutex.withLock { groupDataCache.clear() }
             reloadAllGroups(_uiState.value.groups.map { it.id })
@@ -936,7 +1300,11 @@ class MainViewModel(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
                 status = if (!clearTestingText && state.isRunning == running) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                trafficDownBps = if (running) state.trafficDownBps else 0L,
+                trafficUpBps = if (running) state.trafficUpBps else 0L,
+                trafficHistory = if (running) state.trafficHistory else emptyList(),
+                speedTest = if (running) state.speedTest else SpeedTestState.Idle,
             )
         }
     }
@@ -947,6 +1315,7 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
+        speedTestJob?.cancel()
         cancelAllPing()
         dataSource.close()
         super.onCleared()
@@ -965,5 +1334,19 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+        const val TRAFFIC_HISTORY_SIZE = 24
+        const val SPEED_TEST_MAX_MILLIS = 12_000L
+        const val EXPANSION_BATCH_SIZE = 200
     }
+}
+
+/** True when the user turned animations off in the system settings (animator duration scale = 0). */
+private fun animationsDisabledBySystem(application: Application): Boolean = try {
+    android.provider.Settings.Global.getFloat(
+        application.contentResolver,
+        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+        1f,
+    ) == 0f
+} catch (e: Exception) {
+    false
 }

@@ -71,6 +71,12 @@ object CoreServiceManager {
             }
         }
 
+    /** Number of UI clients that registered (and did not unregister); speed updates are sent only if > 0. */
+    @Volatile
+    private var uiClientCount = 0
+
+    fun hasUiClient(): Boolean = uiClientCount > 0
+
     /**
      * Checks if the V2Ray service is running.
      * @return True if the service is running, false otherwise.
@@ -461,6 +467,7 @@ object CoreServiceManager {
             val serviceControl = serviceControl?.get() ?: return
             when (intent?.getIntExtra("key", 0)) {
                 AppConfig.MSG_REGISTER_CLIENT -> {
+                    uiClientCount++
                     if (isRunning()) {
                         MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, "")
                     } else {
@@ -469,7 +476,7 @@ object CoreServiceManager {
                 }
 
                 AppConfig.MSG_UNREGISTER_CLIENT -> {
-                    // nothing to do
+                    if (uiClientCount > 0) uiClientCount--
                 }
 
                 AppConfig.MSG_STATE_START -> {

@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
+import com.v2ray.ang.handler.TopConfigManager
 
 /** Locale-neutral state formatted only when it reaches the main UI. */
 sealed interface MainStatus {
@@ -12,6 +13,57 @@ sealed interface MainStatus {
     data class TestProgress(val progress: String) : MainStatus
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
+
+/** Result of an auto-select run, shown to the user for confirmation before anything is switched. */
+data class AutoSelectProposal(
+    val guid: String,
+    val remarks: String,
+    val delayMillis: Long,
+    /** True when it came from "Smart connect": confirming also connects, even if not connected yet. */
+    val connect: Boolean = false,
+)
+
+/** Nothing in the top list answered; asks before testing the next batch of configs from the current group. */
+data class ExpandProposal(val count: Int)
+
+/** Name and last test delay of the selected server, loaded off the main thread by the ViewModel. */
+data class SelectedServerInfo(
+    val remarks: String,
+    val delayMillis: Long,
+    /** Two-letter exit country learned from a connection test, or null. */
+    val exitCountry: String? = null,
+)
+
+/** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
+data class TestRunStats(
+    val total: Int = 0,
+    val done: Int = 0,
+    val ok: Int = 0,
+    val failed: Int = 0,
+)
+
+/** Download-speed test of the current connection. */
+sealed interface SpeedTestState {
+    data object Idle : SpeedTestState
+    data object Running : SpeedTestState
+    data class Result(val megabitsPerSecond: Double, val bytes: Long) : SpeedTestState
+    data object Failed : SpeedTestState
+}
+
+/** Pure: Mbit/s for [bytes] received in [millis] (millis is clamped to at least 1). */
+internal fun megabitsPerSecond(bytes: Long, millis: Long): Double =
+    bytes * 8.0 / 1_000_000.0 / (millis.coerceAtLeast(1L) / 1000.0)
+
+/** State of the "top configs" sheet. */
+data class TopUiState(
+    val entries: List<TopConfigManager.Entry> = emptyList(),
+    val limit: Int = TopConfigManager.DEFAULT_LIMIT,
+    val maxDelayMillis: Long = TopConfigManager.DEFAULT_MAX_DELAY_MS,
+    /** Null = all countries; otherwise an ISO alpha-2 code estimated from the server name. */
+    val countryCode: String? = null,
+    val countrySource: TopConfigManager.CountrySource = TopConfigManager.CountrySource.NAME,
+    val isLoading: Boolean = false,
+)
 
 /**
  * Main UI state
@@ -26,7 +78,22 @@ data class MainUiState(
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
-    val shareQRCodeBitmap: android.graphics.Bitmap? = null
+    val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    val autoSelectProposal: AutoSelectProposal? = null,
+    val selectedInfo: SelectedServerInfo? = null,
+    val spatialExpanded: Boolean = true,
+    val reduceMotion: Boolean = false,
+    val simpleMode: Boolean = false,
+    val expandProposal: ExpandProposal? = null,
+    val runStats: TestRunStats = TestRunStats(),
+    /** Number of configs left from a run the user cancelled; 0 = nothing to resume. */
+    val resumableCount: Int = 0,
+    /** Proxy-only speed from the daemon; only delivered while the speed notification setting is on. */
+    val speedEnabled: Boolean = false,
+    val trafficDownBps: Long = 0L,
+    val trafficUpBps: Long = 0L,
+    val trafficHistory: List<Long> = emptyList(),
+    val speedTest: SpeedTestState = SpeedTestState.Idle,
 )
 
 /**
@@ -69,4 +136,27 @@ sealed interface MainAction {
     data class ImportBatchConfig(val configText: String) : MainAction
 
     data object LocateHandled : MainAction
+
+    // Top configs / auto-select
+    data class SetSpatialExpanded(val expanded: Boolean) : MainAction
+    data class SetReduceMotion(val reduce: Boolean) : MainAction
+    data object RefreshTop : MainAction
+    data class SetTopFilter(
+        val limit: Int,
+        val maxDelayMillis: Long,
+        val countryCode: String?,
+        val countrySource: TopConfigManager.CountrySource,
+    ) : MainAction
+    data object ResumeTesting : MainAction
+    data class SetSpatialTheme(val enabled: Boolean) : MainAction
+    data class SetSimpleMode(val enabled: Boolean) : MainAction
+    data object SmartConnect : MainAction
+    data object ConfirmExpand : MainAction
+    data object DismissExpand : MainAction
+    data object SpeedTestCurrent : MainAction
+    data object TestTopConfigs : MainAction
+    data object AutoSelect : MainAction
+    data object DismissAutoSelect : MainAction
+    /** Handled by the Activity (it owns the service restart); [reconnect] asks for a restart if running. */
+    data class ApplyAutoSelect(val guid: String, val reconnect: Boolean) : MainAction
 }

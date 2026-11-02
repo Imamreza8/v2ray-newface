@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -58,6 +60,7 @@ import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.ui.compose.ItemDivider
+import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
@@ -257,7 +260,7 @@ private fun ServerListPage(
                                 actions = actions
                             )
                         }
-                        ItemDivider()
+                        ServerItemDivider()
                     }
                 } else {
                     ServerItemRow(
@@ -265,7 +268,7 @@ private fun ServerListPage(
                         isSelected = row.guid == selectedGuid,
                         actions = actions
                     )
-                    ItemDivider()
+                    ServerItemDivider()
                 }
             }
         }
@@ -332,8 +335,14 @@ private fun ServerItemColumn(
             doubleColumnDisplay = doubleColumnDisplay,
             actions = actions
         )
-        ItemDivider()
+        ServerItemDivider()
     }
+}
+
+/** Rows are separate Bento cards under the neon theme, so the thin divider is only used in the classic look. */
+@Composable
+private fun ServerItemDivider() {
+    if (!LocalSpatialTheme.current) ItemDivider()
 }
 
 @Composable
@@ -343,19 +352,39 @@ private fun ServerListItem(
     doubleColumnDisplay: Boolean,
     actions: ServerRowActions
 ) {
+    // A result is "old" when it is unknown-age (stored by an older version) or older than 30 minutes.
+    val stale = row.testDelayMillis != 0L &&
+            (row.testTime == 0L || System.currentTimeMillis() - row.testTime > STALE_RESULT_MILLIS)
     val testResult = if (row.testDelayMillis == 0L) {
         ""
     } else {
-        stringResource(R.string.server_test_delay_value, row.testDelayMillis)
+        stringResource(R.string.server_test_delay_value, row.testDelayMillis) +
+                if (stale) " · " + stringResource(R.string.spatial_result_old) else ""
     }
     val selectedStateDescription = if (isSelected) {
         stringResource(R.string.acc_selected_server)
     } else {
         null
     }
+    val spatial = LocalSpatialTheme.current
+    val cardShape = RoundedCornerShape(18.dp)
+    val cardModifier = if (spatial) {
+        Modifier
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(cardShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(
+                1.dp,
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                cardShape,
+            )
+    } else {
+        Modifier
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(cardModifier)
             .height(IntrinsicSize.Min)
             .semantics {
                 if (selectedStateDescription != null) {
@@ -457,7 +486,8 @@ private fun ServerListItem(
                 Text(
                     testResult,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (row.testDelayMillis < 0L) colorPingRed else colorPing,
+                    color = (if (row.testDelayMillis < 0L) colorPingRed else colorPing)
+                        .copy(alpha = if (stale) 0.55f else 1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -481,3 +511,5 @@ internal suspend fun PagerState.navigateToPageOptimized(
         scrollToPage(target)
     }
 }
+
+private const val STALE_RESULT_MILLIS = 30L * 60L * 1000L

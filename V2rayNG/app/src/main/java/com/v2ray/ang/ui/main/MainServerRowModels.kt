@@ -13,6 +13,8 @@ internal data class ServerRowUiModel(
     val statistics: String,
     val typeDescription: String,
     val testDelayMillis: Long,
+    /** When [testDelayMillis] was measured (0 = unknown); the list marks old results. */
+    val testTime: Long,
     val subscriptionBadge: String,
 )
 
@@ -34,6 +36,7 @@ internal fun buildServerRowUiModel(
             ?: AngConfigManager.generateDescription(profile),
         typeDescription = serverProtocolDescription(profile),
         testDelayMillis = server.testDelayMillis,
+        testTime = server.testTime,
         subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
     )
 }

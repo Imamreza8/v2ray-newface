@@ -118,6 +118,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     is MainAction.ShareClipboard -> shareToClipboard(action.guid)
                     is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
                     is MainAction.OpenSubscriptionLink -> openSubscriptionLink(action.url)
+                    is MainAction.ApplyAutoSelect -> applyAutoSelect(action.guid, action.reconnect)
                     else -> mainViewModel.onAction(action)
                 }
             },
@@ -274,6 +275,18 @@ class MainActivity : HelperBaseComponentActivity() {
             putExtra("subscriptionId", mainViewModel.uiState.value.selectedGroupId)
         }
         profileEditorLauncher.launch(intent)
+    }
+
+    /** Runs only after the user confirmed the auto-select proposal. */
+    private fun applyAutoSelect(guid: String, reconnect: Boolean) {
+        mainViewModel.onAction(MainAction.DismissAutoSelect)
+        val state = mainViewModel.uiState.value
+        val changed = guid != state.selectedGuid
+        mainViewModel.updateSelectedGuid(guid)
+        // Reconnect (running) or connect (smart connect while stopped) only on the user's confirmation.
+        if (reconnect && (changed || !state.isRunning)) {
+            LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+        }
     }
 
     private fun setSelectServer(guid: String) {
