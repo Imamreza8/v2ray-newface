@@ -29,11 +29,9 @@ import androidx.compose.ui.Modifier
 import com.v2ray.ang.ui.compose.SpatialBackground
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
@@ -51,17 +49,8 @@ fun MainScreen(
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
     val displayText = mainViewModel.formatStatus(uiState.status)
-    // While a bulk test runs, the bottom bar keeps showing the connection and its ping; the test counters live
-    // in the progress strip above the list instead of replacing it.
-    val bulkTestActive = uiState.isTesting && uiState.runStats.total > uiState.runStats.done
-    val bottomText = if (bulkTestActive) {
-        val connection = stringResource(
-            if (uiState.isRunning) R.string.connection_connected else R.string.connection_not_connected
-        )
-        connection
-    } else {
-        displayText
-    }
+    // The current connection result is independent of bulk-test progress and selected profile delay.
+    val bottomText = mainViewModel.formatStatus(uiState.connectionStatus)
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove

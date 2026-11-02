@@ -14,6 +14,17 @@ sealed interface MainStatus {
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
 
+/** Keep the active-connection result separate from bulk-test progress. */
+internal fun connectionStatusAfterTestReset(
+    status: MainStatus,
+    isRunning: Boolean,
+    currentPending: Boolean,
+): MainStatus = when {
+    !isRunning -> MainStatus.Disconnected
+    status == MainStatus.Testing && !currentPending -> MainStatus.Connected
+    else -> status
+}
+
 /** Result of an auto-select run, shown to the user for confirmation before anything is switched. */
 data class AutoSelectProposal(
     val guid: String,
@@ -100,6 +111,7 @@ data class MainUiState(
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val connectionStatus: MainStatus = MainStatus.Disconnected,
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,

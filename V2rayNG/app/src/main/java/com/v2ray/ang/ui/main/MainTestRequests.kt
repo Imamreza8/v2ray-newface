@@ -9,7 +9,8 @@ internal class MainTestRequests {
     private var current: String? = null
     var bulk: Bulk? = null
         private set
-    val isTesting: Boolean get() = current != null || bulk != null
+    val currentPending: Boolean get() = current != null
+    val isTesting: Boolean get() = currentPending || bulk != null
 
     fun beginCurrent(): String = UUID.randomUUID().toString().also { current = it }
 

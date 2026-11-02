@@ -45,4 +45,14 @@ class MainContractTest {
         assertTrue(hasActiveServerFilter("", ServerStatusFilter.FAILED))
     }
 
+    @Test
+    fun connectionStatusRemainsIndependentOfBulkTestReset() {
+        val result = MainStatus.ConnectionTest(com.v2ray.ang.dto.ConnectionTestResult(100))
+        assertEquals(MainStatus.Disconnected, MainUiState().connectionStatus)
+        assertEquals(result, connectionStatusAfterTestReset(result, isRunning = true, currentPending = false))
+        assertEquals(MainStatus.Testing, connectionStatusAfterTestReset(MainStatus.Testing, isRunning = true, currentPending = true))
+        assertEquals(MainStatus.Connected, connectionStatusAfterTestReset(MainStatus.Testing, isRunning = true, currentPending = false))
+        assertEquals(MainStatus.Disconnected, connectionStatusAfterTestReset(result, isRunning = false, currentPending = false))
+    }
+
 }

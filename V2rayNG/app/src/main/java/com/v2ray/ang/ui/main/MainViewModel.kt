@@ -191,7 +191,11 @@ class MainViewModel(
             MainServiceEvent.StateStopSuccess -> updateRunningState(false)
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
-                _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
+                _uiState.update { it.copy(
+                    isTesting = testRequests.isTesting,
+                    status = MainStatus.ConnectionTest(event.result),
+                    connectionStatus = MainStatus.ConnectionTest(event.result),
+                ) }
                 learnExitCountry(event.result)
             }
 
@@ -1021,7 +1025,10 @@ class MainViewModel(
             it.copy(
                 isTesting = testRequests.isTesting,
                 status = if (testRequests.isTesting) MainStatus.Testing
-                else if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
+                else if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected,
+                connectionStatus = connectionStatusAfterTestReset(
+                    it.connectionStatus, it.isRunning, testRequests.currentPending
+                ),
             )
         }
     }
@@ -1313,7 +1320,7 @@ class MainViewModel(
     fun testCurrentServerRealPing() {
         if (!uiState.value.isRunning) return
         val requestId = testRequests.beginCurrent()
-        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing, connectionStatus = MainStatus.Testing) }
         dataSource.testCurrentServerRealPing(requestId)
     }
 
@@ -1363,6 +1370,8 @@ class MainViewModel(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
                 status = if (!clearTestingText && state.isRunning == running) state.status
+                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                connectionStatus = if (!clearTestingText && state.isRunning == running) state.connectionStatus
                 else if (running) MainStatus.Connected else MainStatus.Disconnected,
                 trafficDownBps = if (running) state.trafficDownBps else 0L,
                 trafficUpBps = if (running) state.trafficUpBps else 0L,
