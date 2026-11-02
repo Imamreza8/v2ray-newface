@@ -34,6 +34,31 @@ data class SelectedServerInfo(
     val exitCountry: String? = null,
 )
 
+/** Quick filter of the server list by test result. */
+enum class ServerStatusFilter { ALL, TOP, ALIVE, UNTESTED, FAILED }
+
+/** Filters are evaluated using the same ping value shown in server rows. */
+internal fun matchesServerStatus(delay: Long, filter: ServerStatusFilter, topMaxMillis: Long): Boolean =
+    when (filter) {
+        ServerStatusFilter.ALL -> true
+        ServerStatusFilter.TOP -> delay in 1L..topMaxMillis
+        ServerStatusFilter.ALIVE -> delay > 0L
+        ServerStatusFilter.UNTESTED -> delay == 0L
+        ServerStatusFilter.FAILED -> delay < 0L
+    }
+
+internal fun hasActiveServerFilter(keyword: String, filter: ServerStatusFilter): Boolean =
+    keyword.isNotBlank() || filter != ServerStatusFilter.ALL
+
+/** How many servers of the selected group fall into each [ServerStatusFilter] (search keyword applied). */
+data class FilterCounts(
+    val all: Int = 0,
+    val top: Int = 0,
+    val alive: Int = 0,
+    val untested: Int = 0,
+    val failed: Int = 0,
+)
+
 /** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
 data class TestRunStats(
     val total: Int = 0,
@@ -83,6 +108,8 @@ data class MainUiState(
     val selectedInfo: SelectedServerInfo? = null,
     val spatialExpanded: Boolean = true,
     val reduceMotion: Boolean = false,
+    val statusFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val filterCounts: FilterCounts = FilterCounts(),
     val simpleMode: Boolean = false,
     val expandProposal: ExpandProposal? = null,
     val runStats: TestRunStats = TestRunStats(),
@@ -140,6 +167,7 @@ sealed interface MainAction {
     // Top configs / auto-select
     data class SetSpatialExpanded(val expanded: Boolean) : MainAction
     data class SetReduceMotion(val reduce: Boolean) : MainAction
+    data class SetStatusFilter(val filter: ServerStatusFilter) : MainAction
     data object RefreshTop : MainAction
     data class SetTopFilter(
         val limit: Int,

@@ -65,4 +65,9 @@
     <string name="spatial_connect">Kết nối</string>
     <string name="spatial_disconnect">Ngắt kết nối</string>
     <string name="spatial_menu">Menu</string>
+    <string name="filter_all">Tất cả %1$d</string>
+    <string name="filter_top">Tốt nhất %1$d</string>
+    <string name="filter_alive">Hoạt động %1$d</string>
+    <string name="filter_untested">Chưa kiểm tra %1$d</string>
+    <string name="filter_failed">Thất bại %1$d</string>
 </resources>

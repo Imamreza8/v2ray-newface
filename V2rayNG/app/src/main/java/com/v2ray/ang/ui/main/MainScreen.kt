@@ -31,8 +31,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.LocalSpatialTheme
@@ -51,6 +53,22 @@ fun MainScreen(
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
     val displayText = mainViewModel.formatStatus(uiState.status)
+    // While a bulk test runs, the bottom bar keeps showing the connection and its ping; the test counters live
+    // in the progress strip above the list instead of replacing it.
+    val bulkTestActive = uiState.isTesting && uiState.runStats.total > uiState.runStats.done
+    val selectedPing = uiState.selectedInfo?.delayMillis ?: 0L
+    val bottomText = if (bulkTestActive) {
+        val connection = stringResource(
+            if (uiState.isRunning) R.string.connection_connected else R.string.connection_not_connected
+        )
+        if (uiState.isRunning && selectedPing > 0L) {
+            connection + " · " + stringResource(R.string.server_test_delay_value, selectedPing)
+        } else {
+            connection
+        }
+    } else {
+        displayText
+    }
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
@@ -253,7 +271,7 @@ fun MainScreen(
             },
             bottomBar = {
                 MainBottomBar(
-                    displayText = displayText,
+                    displayText = bottomText,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
                     onAction = onAction
@@ -281,6 +299,7 @@ fun MainScreen(
                         collapsedByScroll = headerCollapsedByScroll,
                         onExpandRequested = { headerCollapsedByScroll = false },
                     )
+                    if (!uiState.simpleMode) ServerListChrome(uiState = uiState, onAction = onAction)
                     if (!uiState.simpleMode && groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
@@ -312,7 +331,8 @@ fun MainScreen(
                             selectedGuid = selectedGuid,
                             locateTarget = uiState.locateTarget,
                             doubleColumnDisplay = doubleColumnDisplay,
-                            searchQuery = searchQuery,
+                            // Reordering is only allowed on the unfiltered list; a status filter counts as filtering.
+                            searchQuery = if (uiState.statusFilter != ServerStatusFilter.ALL) "*" else searchQuery,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },

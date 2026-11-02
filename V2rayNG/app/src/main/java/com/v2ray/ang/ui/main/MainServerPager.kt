@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.onSizeChanged
@@ -355,12 +356,6 @@ private fun ServerListItem(
     // A result is "old" when it is unknown-age (stored by an older version) or older than 30 minutes.
     val stale = row.testDelayMillis != 0L &&
             (row.testTime == 0L || System.currentTimeMillis() - row.testTime > STALE_RESULT_MILLIS)
-    val testResult = if (row.testDelayMillis == 0L) {
-        ""
-    } else {
-        stringResource(R.string.server_test_delay_value, row.testDelayMillis) +
-                if (stale) " · " + stringResource(R.string.spatial_result_old) else ""
-    }
     val selectedStateDescription = if (isSelected) {
         stringResource(R.string.acc_selected_server)
     } else {
@@ -391,8 +386,10 @@ private fun ServerListItem(
                     stateDescription = selectedStateDescription
                 }
             }
-            .clickable { actions.select(row.guid) }
+            .clickable { actions.select(row.guid) },
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Selection marker
         Box(
             Modifier
                 .width(10.dp)
@@ -412,68 +409,33 @@ private fun ServerListItem(
             }
         }
 
+        // Ping badge: the result is the first thing you look for, so it gets its own coloured block
+        PingBadge(delayMillis = row.testDelayMillis, stale = stale)
+
         Column(
             Modifier
                 .weight(1f)
-                .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
+                .padding(start = 10.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(row.remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (doubleColumnDisplay) {
-                    IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_more_vert_24dp),
-                            stringResource(R.string.acc_more),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                } else {
-                    IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            stringResource(R.string.title_configuration_share),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                    IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_edit_24dp),
-                            stringResource(R.string.acc_edit),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                    IconButton(onClick = { actions.remove(row.guid, row.remarks) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            stringResource(R.string.acc_delete),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                row.remarks,
+                style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (row.subscriptionBadge.isNotBlank()) {
                     Box(
                         Modifier
-                            .size(24.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)), Alignment.Center
                     ) {
-                        Text(row.subscriptionBadge.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(row.subscriptionBadge.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
+                    Spacer(Modifier.width(6.dp))
                 }
-                Text(
-                    row.statistics,
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     row.typeDescription,
                     modifier = Modifier.weight(1f, fill = false),
@@ -482,16 +444,69 @@ private fun ServerListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    testResult,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = (if (row.testDelayMillis < 0L) colorPingRed else colorPing)
-                        .copy(alpha = if (stale) 0.55f else 1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (row.statistics.isNotBlank()) {
+                    Text(
+                        " · " + row.statistics,
+                        modifier = Modifier.weight(1f, fill = false),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
+        }
+
+        // One tidy "more" button (share, edit, delete live in its menu) instead of three icons per row
+        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(40.dp)) {
+            Icon(
+                painterResource(R.drawable.ic_more_vert_24dp),
+                stringResource(R.string.acc_more),
+                Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+/** Coloured result block: green < 150 ms, amber < 300 ms, red above or failed, grey = untested. Old results are dimmed. */
+@Composable
+private fun PingBadge(delayMillis: Long, stale: Boolean) {
+    val color = when {
+        delayMillis < 0L -> colorPingRed
+        delayMillis == 0L -> MaterialTheme.colorScheme.onSurfaceVariant
+        delayMillis < 150L -> colorPing
+        delayMillis < 300L -> Color(0xFFF59E0B)
+        else -> colorPingRed
+    }
+    val label = when {
+        delayMillis < 0L -> stringResource(R.string.spatial_test_failed)
+        delayMillis == 0L -> stringResource(R.string.spatial_not_tested)
+        else -> stringResource(R.string.server_test_delay_value, delayMillis)
+    }
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier = Modifier
+            .width(68.dp)
+            .clip(shape)
+            .background(color.copy(alpha = if (stale) 0.08f else 0.16f))
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            label,
+            color = color.copy(alpha = if (stale) 0.6f else 1f),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (stale && delayMillis != 0L) {
+            Text(
+                stringResource(R.string.spatial_result_old),
+                color = color.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
         }
     }
 }

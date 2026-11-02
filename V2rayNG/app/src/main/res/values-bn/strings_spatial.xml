@@ -65,4 +65,9 @@
     <string name="spatial_connect">সংযুক্ত করুন</string>
     <string name="spatial_disconnect">সংযোগ বিচ্ছিন্ন করুন</string>
     <string name="spatial_menu">মেনু</string>
+    <string name="filter_all">সব %1$d</string>
+    <string name="filter_top">সেরা %1$d</string>
+    <string name="filter_alive">সচল %1$d</string>
+    <string name="filter_untested">পরীক্ষা হয়নি %1$d</string>
+    <string name="filter_failed">ব্যর্থ %1$d</string>
 </resources>

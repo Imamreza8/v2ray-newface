@@ -3,6 +3,9 @@ name: Build spatial APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - arena/3b695412-v2ray-newface
 
 jobs:
   build:
@@ -58,23 +61,49 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Unit tests (failures here do not stop the APK)
-      continue-on-error: true
+    - name: Test and build arm64 debug APK
+      shell: bash
       run: |
-        cd ${{ github.workspace }}/V2rayNG
+        cd "${{ github.workspace }}/V2rayNG"
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        ./gradlew :app:testFdroidDebugUnitTest
+        set +e
+        ./gradlew :app:testFdroidDebugUnitTest :app:assembleFdroidDebug -PABI_FILTERS=arm64-v8a 2>&1 | tee "$RUNNER_TEMP/gradle-spatial.log"
+        result=${PIPESTATUS[0]}
+        if [ "$result" -ne 0 ]; then
+          grep -E '^(e: |error: |Execution failed for task|[[:space:]]*> )' "$RUNNER_TEMP/gradle-spatial.log" | head -40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit "$result"
+        fi
 
-    - name: Build APK (fdroid debug, installs next to the official app)
+    - name: Verify arm64 native libraries
+      shell: bash
       run: |
-        cd ${{ github.workspace }}/V2rayNG
-        echo "sdk.dir=${ANDROID_HOME}" > local.properties
-        chmod 755 gradlew
-        ./gradlew :app:assembleFdroidDebug
+        python3 - <<'PY'
+        from pathlib import Path
+        from zipfile import ZipFile
 
-    - name: Upload APKs
+        apks = list(Path('V2rayNG/app/build/outputs/apk/fdroid/debug').glob('*arm64-v8a*.apk'))
+        if len(apks) != 1:
+            raise SystemExit(f'Expected one arm64 APK, got {len(apks)}')
+        with ZipFile(apks[0]) as apk:
+            names = set(apk.namelist())
+            required = {f'lib/arm64-v8a/{name}' for name in (
+                'libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so'
+            )}
+            missing = required - names
+            other_abis = {name.split('/')[1] for name in names
+                          if name.startswith('lib/') and len(name.split('/')) > 2
+                          and name.split('/')[1] != 'arm64-v8a'}
+            if missing or other_abis:
+                raise SystemExit(f'Missing native libraries: {missing}; unexpected ABIs: {other_abis}')
+        print(f'Validated {apks[0]} ({apks[0].stat().st_size} bytes)')
+        PY
+
+    - name: Upload arm64 APK
       uses: actions/upload-artifact@v7
       with:
-        name: spatial-apk
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
+        name: spatial-arm64-debug
+        if-no-files-found: error
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk

@@ -66,4 +66,9 @@
     <string name="spatial_connect">Connect</string>
     <string name="spatial_disconnect">Disconnect</string>
     <string name="spatial_menu">Menu</string>
+    <string name="filter_all">All %1$d</string>
+    <string name="filter_top">Top %1$d</string>
+    <string name="filter_alive">Alive %1$d</string>
+    <string name="filter_untested">Untested %1$d</string>
+    <string name="filter_failed">Failed %1$d</string>
 </resources>

@@ -131,6 +131,7 @@ class MainViewModel(
     // ---------- Keyword filtering ----------
     @Volatile
     private var keywordFilter: String = ""
+    private val statusFilter: ServerStatusFilter get() = uiState.value.statusFilter
     private var filterJob: Job? = null
 
     // ---------- Groups & cache ----------
@@ -277,6 +278,8 @@ class MainViewModel(
                 rows = applyTestDelayResultsToRows(current.rows, updates),
             )
         }
+        refreshFilterCountsFor(request.groupId)
+        if (uiState.value.selectedGuid?.let { it in updates } == true) refreshSelectedInfo()
     }
 
     internal fun formatStatus(status: MainStatus): String = when (status) {
@@ -385,6 +388,7 @@ class MainViewModel(
                 expansionBatch = emptyList()
                 _uiState.update { it.copy(expandProposal = null) }
             }
+            is MainAction.SetStatusFilter -> setStatusFilter(action.filter)
             MainAction.RefreshTop -> loadTop()
             is MainAction.SetTopFilter -> setTopFilter(
                 action.limit, action.maxDelayMillis, action.countryCode, action.countrySource
@@ -496,11 +500,65 @@ class MainViewModel(
     }
 
     private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
-        val filteredServers = applyKeywordFilter(servers)
+        val keywordFiltered = applyKeywordFilter(servers)
+        val filteredServers = applyStatusFilter(keywordFiltered)
         mutableServerGroupState(groupId).value = ServerGroupUiState(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers)
         )
+        publishFilterCounts(groupId, keywordFiltered)
+    }
+
+    private fun applyStatusFilter(servers: List<ServersCache>): List<ServersCache> {
+        val filter = statusFilter
+        if (filter == ServerStatusFilter.ALL) return servers
+        val topMax = TopConfigManager.getMaxDelayMillis()
+        return servers.filter { matchesServerStatus(it.testDelayMillis, filter, topMax) }
+    }
+
+    private fun publishFilterCounts(groupId: String, servers: List<ServersCache>) {
+        val topMax = TopConfigManager.getMaxDelayMillis()
+        var top = 0
+        var alive = 0
+        var untested = 0
+        var failed = 0
+        for (server in servers) {
+            val delay = server.testDelayMillis
+            when {
+                delay > 0L -> {
+                    alive++
+                    if (delay <= topMax) top++
+                }
+                delay == 0L -> untested++
+                else -> failed++
+            }
+        }
+        val counts = FilterCounts(servers.size, top, alive, untested, failed)
+        _uiState.update {
+            if (it.selectedGroupId != groupId || it.filterCounts == counts) it else it.copy(filterCounts = counts)
+        }
+    }
+
+    /** Recomputes the chip counts for [groupId] from the cache (used when the selected group changes). */
+    private fun refreshFilterCountsFor(groupId: String) {
+        viewModelScope.launch(defaultDispatcher) {
+            val servers = cacheMutex.withLock { groupDataCache[groupId] } ?: return@launch
+            publishFilterCounts(groupId, applyKeywordFilter(servers))
+        }
+    }
+
+    private fun setStatusFilter(filter: ServerStatusFilter) {
+        if (filter == statusFilter) return
+        _uiState.update { it.copy(statusFilter = filter) }
+        filterJob?.cancel()
+        filterJob = viewModelScope.launch(defaultDispatcher) {
+            val snapshot = cacheMutex.withLock { groupDataCache.toMap() }
+            ensureActive()
+            snapshot.forEach { (groupId, servers) ->
+                ensureActive()
+                updateGroupUi(groupId, servers)
+            }
+        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -692,7 +750,7 @@ class MainViewModel(
             withContext(ioDispatcher) {
                 try {
                     val groupId = uiState.value.selectedGroupId
-                    val list = if (groupId.isEmpty() && keywordFilter.isEmpty()) {
+                    val list = if (groupId.isEmpty() && !hasActiveServerFilter(keywordFilter, statusFilter)) {
                         dataSource.getServerGuidList("")
                     } else {
                         currentServers().map { it.guid }
@@ -718,7 +776,7 @@ class MainViewModel(
             withContext(ioDispatcher) {
                 try {
                     val count =
-                        if (uiState.value.selectedGroupId.isEmpty() && keywordFilter.isEmpty()) {
+                        if (uiState.value.selectedGroupId.isEmpty() && !hasActiveServerFilter(keywordFilter, statusFilter)) {
                             dataSource.removeAllServer()
                         } else {
                             val guids = currentServers().map { it.guid }
@@ -788,7 +846,7 @@ class MainViewModel(
 
     private fun removeInvalidServerInternal(): Int {
         val visibleServersOnly =
-            uiState.value.selectedGroupId.isNotEmpty() || keywordFilter.isNotBlank()
+            uiState.value.selectedGroupId.isNotEmpty() || hasActiveServerFilter(keywordFilter, statusFilter)
         return if (visibleServersOnly) {
             currentServers().sumOf { server ->
                 dataSource.removeInvalidServerByGuid(server.guid)
@@ -830,6 +888,7 @@ class MainViewModel(
         if (uiState.value.selectedGroupId != id) {
             dataSource.setSelectedSubscriptionId(id)
             _uiState.update { it.copy(selectedGroupId = id) }
+            refreshFilterCountsFor(id)
         }
         selectedGroupLoadJob?.cancel()
         selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
@@ -910,7 +969,9 @@ class MainViewModel(
                     )
                 }
             }
-            _uiState.update { it.copy(selectedInfo = info) }
+            _uiState.update { state ->
+                if (state.selectedGuid == guid) state.copy(selectedInfo = info) else state
+            }
         }
     }
 
@@ -977,10 +1038,12 @@ class MainViewModel(
         // Previous results are kept (not reset to "untested"): each one is replaced as soon as its
         // new result arrives, and a cancelled run does not throw the old results away.
         val request = testRequests.beginBulk(groupId)
+        val filtered = hasActiveServerFilter(keywordFilter, statusFilter)
         val message = TestServiceMessage(
             key = AppConfig.MSG_MEASURE_CONFIG_START,
-            subscriptionId = groupId,
-            serverGuids = if (keywordFilter.isNotEmpty()) serverGuids else emptyList(),
+            // A partial test must not trigger whole-subscription auto-removal or sorting.
+            subscriptionId = if (filtered) "" else groupId,
+            serverGuids = if (filtered) serverGuids else emptyList(),
             onlyTcp = onlyTcp
         )
         _uiState.update {

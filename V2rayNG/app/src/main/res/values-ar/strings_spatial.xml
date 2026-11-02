@@ -65,4 +65,9 @@
     <string name="spatial_connect">اتصال</string>
     <string name="spatial_disconnect">قطع الاتصال</string>
     <string name="spatial_menu">القائمة</string>
+    <string name="filter_all">الكل %1$d</string>
+    <string name="filter_top">الأفضل %1$d</string>
+    <string name="filter_alive">يعمل %1$d</string>
+    <string name="filter_untested">لم يُختبر %1$d</string>
+    <string name="filter_failed">فشل %1$d</string>
 </resources>

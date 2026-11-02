@@ -65,4 +65,9 @@
     <string name="spatial_connect">Подключить</string>
     <string name="spatial_disconnect">Отключить</string>
     <string name="spatial_menu">Меню</string>
+    <string name="filter_all">Все %1$d</string>
+    <string name="filter_top">Лучшие %1$d</string>
+    <string name="filter_alive">Рабочие %1$d</string>
+    <string name="filter_untested">Не проверены %1$d</string>
+    <string name="filter_failed">Ошибки %1$d</string>
 </resources>

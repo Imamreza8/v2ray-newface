@@ -65,4 +65,9 @@
     <string name="spatial_connect">连接</string>
     <string name="spatial_disconnect">断开连接</string>
     <string name="spatial_menu">菜单</string>
+    <string name="filter_all">全部 %1$d</string>
+    <string name="filter_top">优选 %1$d</string>
+    <string name="filter_alive">可用 %1$d</string>
+    <string name="filter_untested">未测试 %1$d</string>
+    <string name="filter_failed">失败 %1$d</string>
 </resources>
