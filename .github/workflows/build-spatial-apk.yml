@@ -1,6 +1,6 @@
 # Beginner workflow: builds an APK of v2rayNG 2.3.14 + the spatial/top-configs patch, entirely on GitHub.
 # Put this file in your fork as .github/workflows/build-spatial-apk.yml and upload
-# v2rayNG-2.3.14-spatial-top.patch to the ROOT of the same fork. Then: Actions -> Build spatial APK -> Run workflow.
+# v2rayNG-spatial-vNN.patch to the ROOT of the same fork (the highest NN is used). Then: Actions -> Build spatial APK -> Run workflow.
 name: Build spatial APK
 
 on:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout upstream v2rayNG 2.3.14 (with submodules)
       uses: actions/checkout@v7
@@ -23,12 +23,17 @@ jobs:
       with:
         path: mine
 
-    - name: Apply the patch
+    - name: Apply the patch (the highest version in your repo is used)
       run: |
-        test -f mine/v2rayNG-2.3.14-spatial-top.patch || { echo "Patch file not found in the root of your fork"; exit 1; }
-        git apply --check mine/v2rayNG-2.3.14-spatial-top.patch
-        git apply mine/v2rayNG-2.3.14-spatial-top.patch
-        echo "Patch applied"
+        PATCH=$(ls mine/v2rayNG-spatial-v*.patch 2>/dev/null | sort -V | tail -1)
+        test -n "$PATCH" || { echo "No file named v2rayNG-spatial-vNN.patch in the root of your fork"; exit 1; }
+        echo "Using patch: $PATCH"
+        wc -c "$PATCH"
+        sha256sum "$PATCH"
+        git apply --check "$PATCH"
+        git apply "$PATCH"
+        echo "Patch applied. CoreServiceManager.kt lines 62-80 for verification:"
+        sed -n 62,80p V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
