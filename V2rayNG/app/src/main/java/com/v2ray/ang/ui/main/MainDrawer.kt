@@ -19,6 +19,8 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
+import com.v2ray.ang.ui.compose.LocalSpatialTheme
+import com.v2ray.ang.ui.compose.SpatialPalette
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -70,7 +72,7 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
     ModalDrawerSheet(
         drawerState = drawerState,
         modifier = Modifier.fillMaxWidth(0.75f),
-        drawerContainerColor = MaterialTheme.colorScheme.surface
+        drawerContainerColor = if (LocalSpatialTheme.current) SpatialPalette.DrawerSurface else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier

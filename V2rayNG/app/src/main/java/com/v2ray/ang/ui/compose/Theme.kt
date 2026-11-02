@@ -103,23 +103,23 @@ private val DarkColor = darkColorScheme(
 
 /** Neon "spatial" dark scheme, used instead of the light/dark/dynamic schemes when the switch is on. */
 private val SpatialColor = darkColorScheme(
-    primary = Color(0xFF00F2FE),
+    primary = SpatialPalette.Cyan,
     onPrimary = Color(0xFF002A2E),
     primaryContainer = Color(0xFF0B2A3A),
     onPrimaryContainer = Color(0xFFBDF6FF),
-    secondary = Color(0xFF9B5DE5),
+    secondary = SpatialPalette.Purple,
     onSecondary = Color(0xFFFFFFFF),
     secondaryContainer = Color(0xFF2A1745),
     onSecondaryContainer = Color(0xFFEADCFF),
-    tertiary = Color(0xFF10B981),
+    tertiary = SpatialPalette.Emerald,
     onTertiary = Color(0xFF00382A),
     tertiaryContainer = Color(0xFF06382C),
     onTertiaryContainer = Color(0xFFA7F3D0),
-    error = Color(0xFFF43F5E),
+    error = SpatialPalette.Rose,
     errorContainer = Color(0xFF5C0A1E),
     onError = Color(0xFFFFFFFF),
     onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF060913),
+    background = SpatialPalette.SkyTop,
     onBackground = Color(0xFFE6EAF5),
     surface = Color(0xFF0B1124),
     onSurface = Color(0xFFE6EAF5),
@@ -131,7 +131,7 @@ private val SpatialColor = darkColorScheme(
     inverseOnSurface = Color(0xFF0B1124),
     inversePrimary = Color(0xFF006B73),
     scrim = Color(0xFF000000),
-    surfaceTint = Color(0xFF00F2FE),
+    surfaceTint = SpatialPalette.Cyan,
     surfaceContainerLowest = Color(0xFF050810),
     surfaceContainerLow = Color(0xFF0A0F1E),
     surfaceContainer = Color(0xFF0F1630),
@@ -222,13 +222,8 @@ fun AppTheme(
     content: @Composable () -> Unit
 ) {
     val dynamicColor by ThemeManager.dynamicColorEnabled.collectAsState()
-    val spatialMode by ThemeManager.spatialThemeMode.collectAsState()
-    val spatialTheme = when (spatialMode) {
-        "1" -> true
-        "0" -> false
-        // Not chosen yet: the spatial home is the app's look, so it is on by default (even in light mode).
-        else -> true
-    }
+    // Older installations may have saved the removed classic theme; always use spatial here.
+    val spatialTheme = true
     // The neon scheme is always dark, so every dark-dependent component must see darkTheme = true.
     val darkTheme = systemDarkTheme || spatialTheme
     val context = LocalContext.current

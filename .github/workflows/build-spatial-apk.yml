@@ -3,6 +3,15 @@ name: Build spatial APK
 
 on:
   workflow_dispatch:
+    inputs:
+      source_version:
+        description: 'Source version to build'
+        required: true
+        type: choice
+        default: current
+        options:
+          - current
+          - previous-v6
   push:
     branches:
       - arena/3b695412-v2ray-newface
@@ -14,6 +23,8 @@ jobs:
     - name: Checkout source (with submodules)
       uses: actions/checkout@v7
       with:
+        # The previous source stays immutable even as this branch advances.
+        ref: ${{ inputs.source_version == 'previous-v6' && '265b743993b7f704c8c216f089c7b2ecabf60c71' || github.sha }}
         submodules: 'recursive'
         fetch-depth: '0'
 
@@ -104,6 +115,6 @@ jobs:
     - name: Upload arm64 APK
       uses: actions/upload-artifact@v7
       with:
-        name: spatial-arm64-debug
+        name: ${{ inputs.source_version == 'previous-v6' && 'spatial-previous-v6-arm64-debug' || 'spatial-arm64-debug' }}
         if-no-files-found: error
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk

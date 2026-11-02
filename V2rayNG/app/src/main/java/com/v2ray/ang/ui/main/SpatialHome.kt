@@ -67,27 +67,28 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.extension.toSpeedString
 import com.v2ray.ang.handler.TopConfigManager
-import com.v2ray.ang.ui.compose.LocalSpatialTheme
+import com.v2ray.ang.ui.compose.GlassCard
+import com.v2ray.ang.ui.compose.GlassChip
+import com.v2ray.ang.ui.compose.GradientButton
+import com.v2ray.ang.ui.compose.NeonSparkline
+import com.v2ray.ang.ui.compose.RoundGlassButton
+import com.v2ray.ang.ui.compose.SpatialBackground
+import com.v2ray.ang.ui.compose.SpatialPalette
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-private val SkyTop = Color(0xFF0A0F2E)
-private val SkyIndigo = Color(0xFF1B1766)
-private val SkyPurple = Color(0xFF4B1A73)
-private val SkyMagenta = Color(0xFFB3235E)
-private val Cyan = Color(0xFF22D3EE)
-private val Magenta = Color(0xFFE879F9)
-private val Emerald = Color(0xFF34D399)
-private val Amber = Color(0xFFFACC15)
-private val Pink = Color(0xFFF472B6)
-private val OceanBlue = Color(0xFF6C7DFF)
-private val TextSoft = Color(0xB3FFFFFF)
+private val Cyan = SpatialPalette.Cyan
+private val Magenta = SpatialPalette.Magenta
+private val Emerald = SpatialPalette.Emerald
+private val Amber = SpatialPalette.Amber
+private val Pink = SpatialPalette.Pink
+private val OceanBlue = SpatialPalette.OceanBlue
+private val TextSoft = SpatialPalette.TextSoft
 
 private const val HOME_GLOBE_POINTS = 1100
-private const val STAR_COUNT = 90
 
 /**
  * Full-screen "3D spatial glassmorphism" home: space background, big dotted globe with neon rings,
@@ -109,7 +110,7 @@ internal fun SpatialHome(
     val stats = uiState.runStats
 
     Box(modifier = Modifier.fillMaxSize()) {
-        SpaceBackground()
+        SpatialBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -191,11 +192,6 @@ internal fun SpatialHome(
                     onClick = { onAction(MainAction.SetReduceMotion(!uiState.reduceMotion)) },
                     label = { Text(stringResource(R.string.spatial_reduce_motion), fontSize = 11.sp) },
                 )
-                FilterChip(
-                    selected = LocalSpatialTheme.current,
-                    onClick = { onAction(MainAction.SetSpatialTheme(false)) },
-                    label = { Text(stringResource(R.string.spatial_neon_theme), fontSize = 11.sp) },
-                )
             }
         }
     }
@@ -223,66 +219,9 @@ internal fun SpatialHome(
 // Background
 // ---------------------------------------------------------------------------------------------
 
-@Composable
-private fun SpaceBackground() {
-    val stars = remember {
-        val random = Random(7)
-        List(STAR_COUNT) {
-            floatArrayOf(random.nextFloat(), random.nextFloat(), 0.6f + random.nextFloat() * 1.6f, 0.25f + random.nextFloat() * 0.6f)
-        }
-    }
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRect(Brush.verticalGradient(listOf(SkyTop, SkyIndigo, SkyPurple, SkyMagenta)))
-        drawCircle(
-            brush = Brush.radialGradient(
-                listOf(Cyan.copy(alpha = 0.16f), Color.Transparent),
-                center = Offset(size.width * 0.15f, size.height * 0.2f),
-                radius = size.width * 0.8f,
-            ),
-            radius = size.width * 0.8f,
-            center = Offset(size.width * 0.15f, size.height * 0.2f),
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
-                listOf(Magenta.copy(alpha = 0.18f), Color.Transparent),
-                center = Offset(size.width * 0.9f, size.height * 0.95f),
-                radius = size.width * 0.9f,
-            ),
-            radius = size.width * 0.9f,
-            center = Offset(size.width * 0.9f, size.height * 0.95f),
-        )
-        stars.forEach { s ->
-            drawCircle(Color.White.copy(alpha = s[3]), radius = s[2], center = Offset(s[0] * size.width, s[1] * size.height))
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------------------------
 // Cards
 // ---------------------------------------------------------------------------------------------
-
-/** Translucent card with a light border (glass look without a backdrop blur). */
-@Composable
-private fun GlassCard(
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val shape = RoundedCornerShape(26.dp)
-    Column(
-        modifier = modifier
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.07f))))
-            .border(
-                1.dp,
-                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.10f))),
-                shape,
-            )
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(18.dp),
-        content = content,
-    )
-}
 
 @Composable
 private fun ConnectionCard(uiState: MainUiState) {
@@ -386,97 +325,6 @@ private fun LocationCard(uiState: MainUiState, onOpenList: () -> Unit, onAction:
             running = running,
             onClick = { onAction(MainAction.ToggleService) },
         )
-    }
-}
-
-@Composable
-private fun GradientButton(label: String, running: Boolean, onClick: () -> Unit) {
-    val colors = if (running) {
-        listOf(Color(0xFF2DD4BF), Color(0xFF8B5CF6), Color(0xFFF87171))
-    } else {
-        listOf(Color(0xFF22D3EE), Color(0xFF6366F1), Color(0xFFEC4899))
-    }
-    val shape = RoundedCornerShape(18.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(shape)
-            .background(Brush.horizontalGradient(colors))
-            .border(1.dp, Color.White.copy(alpha = 0.35f), shape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun RoundGlassButton(glyph: String, description: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.14f))
-            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-            .semantics { contentDescription = description }
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        // Decorative glyph: the box is named by [description].
-        Text(glyph, color = Color.White, fontSize = 20.sp, modifier = Modifier.clearAndSetSemantics { })
-    }
-}
-
-@Composable
-private fun GlassChip(
-    label: String,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    val tint = if (enabled) accent else accent.copy(alpha = 0.35f)
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White.copy(alpha = 0.10f),
-        border = BorderStroke(1.dp, tint.copy(alpha = 0.6f)),
-    ) {
-        Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        }
-    }
-}
-
-/** Live line chart of the proxy download speed (pink to cyan), with a soft fill. */
-@Composable
-private fun NeonSparkline(values: List<Long>, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val points = if (values.size >= 2) values else listOf(0L, 0L)
-        val max = (points.maxOrNull() ?: 1L).coerceAtLeast(1L).toFloat()
-        val step = size.width / (points.size - 1)
-        val line = Path()
-        val fill = Path()
-        points.forEachIndexed { i, v ->
-            val x = i * step
-            val y = size.height * (1f - (v.toFloat() / max).coerceIn(0.06f, 0.96f))
-            if (i == 0) {
-                line.moveTo(x, y)
-                fill.moveTo(x, size.height)
-                fill.lineTo(x, y)
-            } else {
-                line.lineTo(x, y)
-                fill.lineTo(x, y)
-            }
-        }
-        fill.lineTo(size.width, size.height)
-        fill.close()
-        val brush = Brush.horizontalGradient(listOf(Pink, Magenta, Cyan, Emerald))
-        drawPath(fill, Brush.verticalGradient(listOf(Cyan.copy(alpha = 0.25f), Color.Transparent)))
-        drawPath(line, brush, style = Stroke(width = 4f, cap = StrokeCap.Round))
     }
 }
 

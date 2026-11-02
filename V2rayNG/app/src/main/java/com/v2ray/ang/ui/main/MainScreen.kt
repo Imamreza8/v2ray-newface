@@ -26,18 +26,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
+import com.v2ray.ang.ui.compose.SpatialBackground
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
-import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -56,16 +54,11 @@ fun MainScreen(
     // While a bulk test runs, the bottom bar keeps showing the connection and its ping; the test counters live
     // in the progress strip above the list instead of replacing it.
     val bulkTestActive = uiState.isTesting && uiState.runStats.total > uiState.runStats.done
-    val selectedPing = uiState.selectedInfo?.delayMillis ?: 0L
     val bottomText = if (bulkTestActive) {
         val connection = stringResource(
             if (uiState.isRunning) R.string.connection_connected else R.string.connection_not_connected
         )
-        if (uiState.isRunning && selectedPing > 0L) {
-            connection + " · " + stringResource(R.string.server_test_delay_value, selectedPing)
-        } else {
-            connection
-        }
+        connection
     } else {
         displayText
     }
@@ -75,31 +68,7 @@ fun MainScreen(
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
     val topState by mainViewModel.topState.collectAsStateWithLifecycle()
     var showTopSheet by remember { mutableStateOf(false) }
-    // With the neon theme the app opens on the spatial home; the full config list (the classic screen)
-    // opens from the location card and closes with Back.
-    val homeMode = LocalSpatialTheme.current
     var showFullList by rememberSaveable { mutableStateOf(false) }
-    // The header folds away while the list is scrolled down and returns when scrolling back up (visual only).
-    var headerCollapsedByScroll by remember { mutableStateOf(false) }
-    val headerScrollConnection = remember {
-        object : NestedScrollConnection {
-            private var accumulated = 0f
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val dy = available.y
-                if (dy != 0f) {
-                    if (accumulated != 0f && (dy > 0f) != (accumulated > 0f)) accumulated = 0f
-                    accumulated += dy
-                    if (accumulated < -HEADER_SCROLL_THRESHOLD_PX) {
-                        headerCollapsedByScroll = true
-                    } else if (accumulated > HEADER_SCROLL_THRESHOLD_PX) {
-                        headerCollapsedByScroll = false
-                    }
-                }
-                return Offset.Zero
-            }
-        }
-    }
-
     LaunchedEffect(Unit) { onAction(MainAction.RefreshTop) }
 
     val isDarkTheme = LocalDarkTheme.current
@@ -220,7 +189,7 @@ fun MainScreen(
             )
         }
     ) {
-        if (homeMode && !showFullList) {
+        if (!showFullList) {
             SpatialHome(
                 uiState = uiState,
                 statusText = displayText,
@@ -233,8 +202,12 @@ fun MainScreen(
                 },
             )
         } else {
-        if (homeMode) BackHandler { showFullList = false }
+        BackHandler { showFullList = false }
+        Box(modifier = Modifier.fillMaxSize()) {
+        // Same space backdrop as the home screen, so the list screen no longer looks like another app
+        SpatialBackground()
         Scaffold(
+            containerColor = Color.Transparent,
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
                 MainTopBar(
@@ -287,20 +260,8 @@ fun MainScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    if (!homeMode) SpatialHeader(
-                        uiState = uiState,
-                        statusText = displayText,
-                        topCount = topState.entries.size,
-                        onAction = onAction,
-                        onOpenTop = {
-                            onAction(MainAction.RefreshTop)
-                            showTopSheet = true
-                        },
-                        collapsedByScroll = headerCollapsedByScroll,
-                        onExpandRequested = { headerCollapsedByScroll = false },
-                    )
-                    if (!uiState.simpleMode) ServerListChrome(uiState = uiState, onAction = onAction)
-                    if (!uiState.simpleMode && groups.size > 1) {
+                    ServerListChrome(uiState = uiState, onAction = onAction)
+                    if (groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
                             selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
@@ -316,9 +277,9 @@ fun MainScreen(
                         )
                     }
 
-                    if (!uiState.simpleMode) HorizontalPager(
+                    HorizontalPager(
                         state = pagerState,
-                        modifier = Modifier.fillMaxSize().nestedScroll(headerScrollConnection),
+                        modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = true,
                         beyondViewportPageCount = 1,
                         key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
@@ -359,7 +320,6 @@ fun MainScreen(
             }
         }
         }
+        }
     }
 }
-
-private const val HEADER_SCROLL_THRESHOLD_PX = 120f

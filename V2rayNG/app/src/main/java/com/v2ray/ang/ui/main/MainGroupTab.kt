@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
@@ -81,7 +82,7 @@ fun GroupTabBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         shape = CircleShape,
-        color = if (dark) colors.surfaceContainerHigh else colors.surface,
+        color = if (LocalSpatialTheme.current) Color.White.copy(alpha = 0.12f) else if (dark) colors.surfaceContainerHigh else colors.surface,
         border = BorderStroke(0.5.dp, colors.outlineVariant.copy(alpha = if (dark) 0.6f else 0.35f)),
         shadowElevation = 3.dp
     ) {
