@@ -121,4 +121,6 @@
     <string name="save_order_title">永久儲存顯示順序</string>
     <string name="save_order_confirm">群組 %1$s 中 %2$d 個設定的儲存順序將變更為：%3$s。要繼續嗎？</string>
     <string name="save_order_unavailable">請選擇群組，清除搜尋和篩選，並等待測試及載入完成。</string>
+    <string name="controls_hide">隱藏群組和篩選</string>
+    <string name="controls_show">顯示群組和篩選</string>
 </resources>

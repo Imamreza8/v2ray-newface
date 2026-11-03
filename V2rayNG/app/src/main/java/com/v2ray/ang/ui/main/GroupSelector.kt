@@ -19,7 +19,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +54,6 @@ internal fun GroupSelector(
     val selectedGroupFlow = remember(selected.id, mainViewModel) { mainViewModel.serverGroupState(selected.id) }
     val selectedState by selectedGroupFlow.collectAsStateWithLifecycle()
     var showGroups by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(selectedGroupId) { onShowDetails(false) }
     val selectedLabel = selected.remarks
     val usage = selected.usageInfo
     val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
@@ -48,6 +49,8 @@ import com.v2ray.ang.R
 @Composable
 internal fun ServerListChrome(
     uiState: MainUiState,
+    controlsExpanded: Boolean,
+    onToggleControls: () -> Unit,
     onAction: (MainAction) -> Unit,
 ) {
     var showTestOptions by rememberSaveable { mutableStateOf(false) }
@@ -105,12 +108,23 @@ internal fun ServerListChrome(
                 selected = uiState.displaySort,
                 onSelect = { onAction(MainAction.SetDisplaySort(it)) },
             )
-            ServerFilterBar(
-                modifier = Modifier.weight(1f),
-                selected = uiState.statusFilter,
-                counts = uiState.filterCounts,
-                onSelect = { onAction(MainAction.SetStatusFilter(it)) },
-            )
+            if (controlsExpanded) {
+                ServerFilterBar(
+                    modifier = Modifier.weight(1f),
+                    selected = uiState.statusFilter,
+                    counts = uiState.filterCounts,
+                    onSelect = { onAction(MainAction.SetStatusFilter(it)) },
+                )
+            } else {
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            }
+            IconButton(onClick = onToggleControls) {
+                Icon(
+                    painterResource(R.drawable.ic_expand_more_24dp),
+                    contentDescription = stringResource(if (controlsExpanded) R.string.controls_hide else R.string.controls_show),
+                    modifier = Modifier.graphicsLayer { rotationZ = if (controlsExpanded) 180f else 0f },
+                )
+            }
         }
     }
 }

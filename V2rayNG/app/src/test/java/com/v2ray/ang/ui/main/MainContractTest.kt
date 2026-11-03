@@ -67,4 +67,13 @@ class MainContractTest {
         assertEquals(ConnectionSummaryKind.SUCCESS_WITH_COUNTRY, connectionSummaryKind(MainStatus.ConnectionTest(com.v2ray.ang.dto.ConnectionTestResult(25, country = "US"))))
     }
 
+    @Test
+    fun listControlsFollowVerticalScrollAndIgnoreJitterOrHorizontalPaging() {
+        assertEquals(false, controlsExpandedAfterScroll(true, 0f, -10f))
+        assertEquals(true, controlsExpandedAfterScroll(false, 0f, 10f))
+        assertEquals(true, controlsExpandedAfterScroll(true, 0f, -1f))
+        assertEquals(false, controlsExpandedAfterScroll(false, 12f, 3f))
+        assertEquals(true, controlsExpandedAfterScroll(true, Float.NaN, -10f))
+    }
+
 }

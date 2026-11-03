@@ -121,4 +121,6 @@
     <string name="save_order_title">Сохранить порядок отображения навсегда</string>
     <string name="save_order_confirm">Сохранённый порядок группы %1$s для %2$d профилей изменится на: %3$s. Продолжить?</string>
     <string name="save_order_unavailable">Выберите группу, очистите поиск и фильтры и дождитесь завершения теста и загрузки.</string>
+    <string name="controls_hide">Скрыть группы и фильтры</string>
+    <string name="controls_show">Показать группы и фильтры</string>
 </resources>

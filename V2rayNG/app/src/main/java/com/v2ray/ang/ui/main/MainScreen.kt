@@ -26,6 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.v2ray.ang.ui.compose.SpatialBackground
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
@@ -65,6 +69,16 @@ fun MainScreen(
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showSubscriptionDetails by rememberSaveable { mutableStateOf(false) }
+    var controlsExpanded by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(uiState.selectedGroupId) { showSubscriptionDetails = false }
+    val listNestedScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                controlsExpanded = controlsExpandedAfterScroll(controlsExpanded, available.x, available.y)
+                return Offset.Zero
+            }
+        }
+    }
     var showDelAllConfirm by remember { mutableStateOf(false) }
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
@@ -232,7 +246,7 @@ fun MainScreen(
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
                             MainMoreMenuAction.SortByTestResults -> onAction(MainAction.PrepareSaveOrder)
-                            MainMoreMenuAction.GroupDetails -> showSubscriptionDetails = true
+                            MainMoreMenuAction.GroupDetails -> { controlsExpanded = true; showSubscriptionDetails = true }
                             MainMoreMenuAction.TestAll -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.TCP))
                             MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL))
                             MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
@@ -256,8 +270,9 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .nestedScroll(listNestedScroll)
                 ) {
-                    GroupSelector(
+                    if (controlsExpanded) GroupSelector(
                         groups = groups,
                         selectedGroupId = uiState.selectedGroupId,
                         mainViewModel = mainViewModel,
@@ -275,7 +290,12 @@ fun MainScreen(
                         onShowDetails = { showSubscriptionDetails = it },
                         onAction = onAction,
                     )
-                    ServerListChrome(uiState = uiState, onAction = onAction)
+                    ServerListChrome(
+                        uiState = uiState,
+                        controlsExpanded = controlsExpanded,
+                        onToggleControls = { controlsExpanded = !controlsExpanded },
+                        onAction = onAction,
+                    )
 
                     HorizontalPager(
                         state = pagerState,

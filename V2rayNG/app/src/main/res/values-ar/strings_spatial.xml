@@ -121,4 +121,6 @@
     <string name="save_order_title">حفظ ترتيب العرض دائماً</string>
     <string name="save_order_confirm">سيتغير ترتيب المجموعة %1$s المحفوظ لعدد %2$d من الإعدادات إلى: %3$s. هل تريد المتابعة؟</string>
     <string name="save_order_unavailable">اختر مجموعة وأزل البحث والمرشحات وانتظر انتهاء الاختبار والتحميل.</string>
+    <string name="controls_hide">إخفاء المجموعات والمرشحات</string>
+    <string name="controls_show">إظهار المجموعات والمرشحات</string>
 </resources>

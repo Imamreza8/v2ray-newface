@@ -77,6 +77,14 @@ internal fun matchesServerStatus(delay: Long, filter: ServerStatusFilter, topMax
 internal fun hasActiveServerFilter(keyword: String, filter: ServerStatusFilter): Boolean =
     keyword.isNotBlank() || filter != ServerStatusFilter.ALL
 
+/** Collapse only for predominantly vertical list gestures; a small jitter leaves state unchanged. */
+internal fun controlsExpandedAfterScroll(expanded: Boolean, deltaX: Float, deltaY: Float): Boolean = when {
+    !deltaX.isFinite() || !deltaY.isFinite() -> expanded
+    kotlin.math.abs(deltaY) <= 2f || kotlin.math.abs(deltaY) <= kotlin.math.abs(deltaX) -> expanded
+    deltaY < 0f -> false
+    else -> true
+}
+
 /** How many servers of the selected group fall into each [ServerStatusFilter] (search keyword applied). */
 data class FilterCounts(
     val all: Int = 0,

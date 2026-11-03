@@ -121,4 +121,6 @@
     <string name="save_order_title">永久保存显示顺序</string>
     <string name="save_order_confirm">分组 %1$s 中 %2$d 个配置的保存顺序将更改为：%3$s。继续吗？</string>
     <string name="save_order_unavailable">请选择分组，清除搜索和筛选，并等待测试及加载完成。</string>
+    <string name="controls_hide">隐藏分组和筛选</string>
+    <string name="controls_show">显示分组和筛选</string>
 </resources>

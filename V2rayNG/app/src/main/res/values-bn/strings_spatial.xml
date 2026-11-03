@@ -121,4 +121,6 @@
     <string name="save_order_title">প্রদর্শনের ক্রম স্থায়ীভাবে সংরক্ষণ</string>
     <string name="save_order_confirm">%1$s গ্রুপের %2$d কনফিগের সংরক্ষিত ক্রম %3$s হবে। চালিয়ে যাবেন?</string>
     <string name="save_order_unavailable">একটি গ্রুপ বেছে নিন, অনুসন্ধান ও ফিল্টার সরান এবং পরীক্ষা ও লোডিং শেষ হওয়া পর্যন্ত অপেক্ষা করুন।</string>
+    <string name="controls_hide">গ্রুপ ও ফিল্টার লুকান</string>
+    <string name="controls_show">গ্রুপ ও ফিল্টার দেখান</string>
 </resources>

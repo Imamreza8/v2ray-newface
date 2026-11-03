@@ -122,4 +122,6 @@
     <string name="save_order_title">Save display order permanently</string>
     <string name="save_order_confirm">The saved order of group %1$s will change for %2$d configs to: %3$s. Continue?</string>
     <string name="save_order_unavailable">Select a group, clear search and filters, and wait until testing and loading finish.</string>
+    <string name="controls_hide">Hide groups and filters</string>
+    <string name="controls_show">Show groups and filters</string>
 </resources>

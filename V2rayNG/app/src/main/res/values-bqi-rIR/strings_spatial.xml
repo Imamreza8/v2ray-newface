@@ -121,4 +121,6 @@
     <string name="save_order_title">ذخیره دائمی ترتیب نمایشی</string>
     <string name="save_order_confirm">ترتیب ذخیره‌شده گروه %1$s برای %2$d کانفیگ به «%3$s» تغییر می‌کند. ادامه می‌دهید؟</string>
     <string name="save_order_unavailable">یک گروه انتخاب کنید، جست‌وجو و فیلترها را پاک کنید و منتظر پایان تست و بارگذاری بمانید.</string>
+    <string name="controls_hide">جمع کردن گروه و فیلترها</string>
+    <string name="controls_show">نمایش گروه و فیلترها</string>
 </resources>
