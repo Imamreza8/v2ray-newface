@@ -64,4 +64,18 @@ class MainImportMenuTest {
         )
     }
 
+    @Test
+    fun toolsSheetShowsOperationsOnceAndKeepsDedicatedTestAndLocateOut() {
+        val visible = ToolCategory.entries.flatMap(::visibleToolActions)
+        assertEquals(visible.size, visible.toSet().size)
+        assertEquals(
+            MainMoreMenuAction.entries.toSet() - setOf(MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing, MainMoreMenuAction.LocateSelected),
+            visible.toSet(),
+        )
+        assertEquals(ToolCategory.SUBSCRIPTIONS, toolCategory(MainMoreMenuAction.GroupDetails))
+        assertEquals(ToolCategory.SERVICE, toolCategory(MainMoreMenuAction.RestartService))
+        assertEquals(ToolCategory.EXPORT, toolCategory(MainMoreMenuAction.ExportAll))
+        assertEquals(ToolCategory.ORDER, toolCategory(MainMoreMenuAction.SortByTestResults))
+    }
+
 }

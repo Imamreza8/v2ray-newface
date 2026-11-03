@@ -100,6 +100,15 @@ data class ScopedTestProposal(
     val guids: List<String>,
 )
 
+/** Confirmed single-group order; no list indexes are used as identity. */
+data class SaveOrderProposal(
+    val groupId: String,
+    val groupName: String,
+    val sort: ServerDisplaySort,
+    val expected: List<String>,
+    val proposed: List<String>,
+)
+
 /** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
 data class TestRunStats(
     val total: Int = 0,
@@ -156,6 +165,7 @@ data class MainUiState(
     val simpleMode: Boolean = false,
     val expandProposal: ExpandProposal? = null,
     val scopedTestProposal: ScopedTestProposal? = null,
+    val saveOrderProposal: SaveOrderProposal? = null,
     val runStats: TestRunStats = TestRunStats(),
     /** Number of configs left from a run the user cancelled; 0 = nothing to resume. */
     val resumableCount: Int = 0,
@@ -185,6 +195,9 @@ sealed interface MainAction {
     data object RemoveDuplicateServers : MainAction
     data object RemoveInvalidServers : MainAction
     data object SortByTestResults : MainAction
+    data object PrepareSaveOrder : MainAction
+    data object ConfirmSaveOrder : MainAction
+    data object DismissSaveOrder : MainAction
     data object UpdateSubscriptions : MainAction
     data class UpdateGroupSubscription(val groupId: String) : MainAction
     data object ExportAll : MainAction

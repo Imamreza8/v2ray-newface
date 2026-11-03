@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">بلا انتهاء</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">تفاصيل الاشتراك؛ الاستخدام %1$s؛ الانتهاء %2$s</string>
+    <string name="spatial_tools_service">الخدمة</string>
+    <string name="spatial_tools_export">تصدير</string>
+    <string name="spatial_tools_order">الترتيب</string>
+    <string name="save_order_title">حفظ ترتيب العرض دائماً</string>
+    <string name="save_order_confirm">سيتغير ترتيب المجموعة %1$s المحفوظ لعدد %2$d من الإعدادات إلى: %3$s. هل تريد المتابعة؟</string>
+    <string name="save_order_unavailable">اختر مجموعة وأزل البحث والمرشحات وانتظر انتهاء الاختبار والتحميل.</string>
 </resources>

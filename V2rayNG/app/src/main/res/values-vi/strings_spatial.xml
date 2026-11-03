@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">Không hết hạn</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">Chi tiết đăng ký; đã dùng %1$s; hết hạn %2$s</string>
+    <string name="spatial_tools_service">Dịch vụ</string>
+    <string name="spatial_tools_export">Xuất</string>
+    <string name="spatial_tools_order">Thứ tự</string>
+    <string name="save_order_title">Lưu vĩnh viễn thứ tự hiển thị</string>
+    <string name="save_order_confirm">Thứ tự đã lưu của nhóm %1$s cho %2$d cấu hình sẽ đổi thành: %3$s. Tiếp tục?</string>
+    <string name="save_order_unavailable">Chọn nhóm, xóa tìm kiếm và bộ lọc, rồi đợi kiểm tra và tải hoàn tất.</string>
 </resources>

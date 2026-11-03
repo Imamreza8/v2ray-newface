@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">Бессрочно</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">Сведения о подписке; использовано %1$s; срок %2$s</string>
+    <string name="spatial_tools_service">Сервис</string>
+    <string name="spatial_tools_export">Экспорт</string>
+    <string name="spatial_tools_order">Порядок</string>
+    <string name="save_order_title">Сохранить порядок отображения навсегда</string>
+    <string name="save_order_confirm">Сохранённый порядок группы %1$s для %2$d профилей изменится на: %3$s. Продолжить?</string>
+    <string name="save_order_unavailable">Выберите группу, очистите поиск и фильтры и дождитесь завершения теста и загрузки.</string>
 </resources>

@@ -116,4 +116,10 @@
     <string name="subscription_no_expiry">No expiry</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">Subscription details; usage %1$s; expires %2$s</string>
+    <string name="spatial_tools_service">Service</string>
+    <string name="spatial_tools_export">Export</string>
+    <string name="spatial_tools_order">Order</string>
+    <string name="save_order_title">Save display order permanently</string>
+    <string name="save_order_confirm">The saved order of group %1$s will change for %2$d configs to: %3$s. Continue?</string>
+    <string name="save_order_unavailable">Select a group, clear search and filters, and wait until testing and loading finish.</string>
 </resources>

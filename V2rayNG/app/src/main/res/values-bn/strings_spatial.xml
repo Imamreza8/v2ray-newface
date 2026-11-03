@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">মেয়াদ নেই</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">সাবস্ক্রিপশনের বিস্তারিত; ব্যবহার %1$s; মেয়াদ %2$s</string>
+    <string name="spatial_tools_service">সেবা</string>
+    <string name="spatial_tools_export">রপ্তানি</string>
+    <string name="spatial_tools_order">ক্রম</string>
+    <string name="save_order_title">প্রদর্শনের ক্রম স্থায়ীভাবে সংরক্ষণ</string>
+    <string name="save_order_confirm">%1$s গ্রুপের %2$d কনফিগের সংরক্ষিত ক্রম %3$s হবে। চালিয়ে যাবেন?</string>
+    <string name="save_order_unavailable">একটি গ্রুপ বেছে নিন, অনুসন্ধান ও ফিল্টার সরান এবং পরীক্ষা ও লোডিং শেষ হওয়া পর্যন্ত অপেক্ষা করুন।</string>
 </resources>

@@ -47,14 +47,15 @@ internal fun GroupSelector(
     mainViewModel: MainViewModel,
     onSelectGroup: (String) -> Unit,
     onManageGroups: () -> Unit,
+    showDetails: Boolean,
+    onShowDetails: (Boolean) -> Unit,
     onAction: (MainAction) -> Unit,
 ) {
     val selected = groups.firstOrNull { it.id == selectedGroupId } ?: return
     val selectedGroupFlow = remember(selected.id, mainViewModel) { mainViewModel.serverGroupState(selected.id) }
     val selectedState by selectedGroupFlow.collectAsStateWithLifecycle()
     var showGroups by rememberSaveable { mutableStateOf(false) }
-    var showDetails by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(selectedGroupId) { showDetails = false }
+    LaunchedEffect(selectedGroupId) { onShowDetails(false) }
     val selectedLabel = selected.remarks
     val usage = selected.usageInfo
     val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }
@@ -76,7 +77,7 @@ internal fun GroupSelector(
         }
         if (selected.id.isNotEmpty()) {
             if (summary == null) {
-                TextButton(onClick = { showDetails = true }) {
+                TextButton(onClick = { onShowDetails(true) }) {
                     Text(stringResource(R.string.spatial_subscription_details))
                 }
             } else {
@@ -88,7 +89,7 @@ internal fun GroupSelector(
                 val line = stringResource(R.string.subscription_summary_line, traffic, expiry)
                 val accessible = stringResource(R.string.subscription_summary_accessible, traffic, expiry)
                 TextButton(
-                    onClick = { showDetails = true },
+                    onClick = { onShowDetails(true) },
                     modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = accessible },
                 ) {
                     Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
@@ -149,9 +150,9 @@ internal fun GroupSelector(
             },
         )
     }
-    if (showDetails && selected.id.isNotEmpty()) {
+    if (showDetails) {
         AlertDialog(
-            onDismissRequest = { showDetails = false },
+            onDismissRequest = { onShowDetails(false) },
             title = { Text(selected.remarks) },
             text = {
                 if (usage != null) {
@@ -171,7 +172,7 @@ internal fun GroupSelector(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDetails = false }) { Text(stringResource(R.string.action_close)) }
+                TextButton(onClick = { onShowDetails(false) }) { Text(stringResource(R.string.action_close)) }
             },
         )
     }

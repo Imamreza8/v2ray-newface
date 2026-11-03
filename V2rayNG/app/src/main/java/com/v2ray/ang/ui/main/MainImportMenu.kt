@@ -3,10 +3,14 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,7 +49,8 @@ enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
     DeleteInvalid(R.string.title_del_invalid_config),
     ExportAll(R.string.title_export_all),
     LocateSelected(R.string.title_locate_selected_config),
-    SortByTestResults(R.string.title_sort_by_test_results),
+    SortByTestResults(R.string.save_order_title),
+    GroupDetails(R.string.spatial_subscription_details),
     TestAll(R.string.title_ping_all_server),
     TestAllRealPing(R.string.title_real_ping_all_server),
     UpdateSubscriptions(R.string.title_sub_update)
@@ -112,51 +117,71 @@ fun ManualImportDialog(onAction: (MainAction) -> Unit, onDismiss: () -> Unit) {
 }
 
 internal enum class ToolCategory(@StringRes val labelRes: Int) {
-    TEST(R.string.spatial_tools_test),
     SUBSCRIPTIONS(R.string.spatial_tools_subscriptions),
-    OTHER(R.string.spatial_tools_other),
+    SERVICE(R.string.spatial_tools_service),
+    EXPORT(R.string.spatial_tools_export),
+    ORDER(R.string.spatial_tools_order),
     DELETE(R.string.spatial_tools_delete),
 }
 
 internal fun toolCategory(action: MainMoreMenuAction): ToolCategory = when (action) {
     MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing,
-    MainMoreMenuAction.SortByTestResults, MainMoreMenuAction.LocateSelected -> ToolCategory.TEST
-    MainMoreMenuAction.UpdateSubscriptions -> ToolCategory.SUBSCRIPTIONS
-    MainMoreMenuAction.RestartService, MainMoreMenuAction.ExportAll -> ToolCategory.OTHER
+    MainMoreMenuAction.SortByTestResults, MainMoreMenuAction.LocateSelected -> ToolCategory.ORDER
+    MainMoreMenuAction.UpdateSubscriptions, MainMoreMenuAction.GroupDetails -> ToolCategory.SUBSCRIPTIONS
+    MainMoreMenuAction.RestartService -> ToolCategory.SERVICE
+    MainMoreMenuAction.ExportAll -> ToolCategory.EXPORT
     MainMoreMenuAction.DeleteAll, MainMoreMenuAction.DeleteDuplicate,
     MainMoreMenuAction.DeleteInvalid -> ToolCategory.DELETE
 }
 
+/** Testing and locating have dedicated controls; do not duplicate them in tools. */
+internal fun visibleToolActions(category: ToolCategory): List<MainMoreMenuAction> =
+    MainMoreMenuAction.entries.filter { action ->
+        toolCategory(action) == category && action !in setOf(
+            MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing, MainMoreMenuAction.LocateSelected,
+        )
+    }
+
+// ModalBottomSheet is experimental in the pinned Material 3 version; reevaluate when its stable
+// equivalent is available. MainImportMenuTest covers tool routing and category membership.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreMenuDialog(onSelected: (MainMoreMenuAction) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.acc_more)) },
-        text = {
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                ToolCategory.entries.forEach { category ->
-                    key(category) {
-                        Text(
-                            stringResource(category.labelRes),
-                            modifier = Modifier.padding(start = 16.dp, top = 12.dp),
-                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                        )
-                        MainMoreMenuAction.entries.filter { toolCategory(it) == category }.forEach { action ->
-                            key(action) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(action.labelRes)) },
-                                    onClick = { onSelected(action) },
-                                )
-                            }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .navigationBarsPadding().padding(horizontal = 16.dp),
+        ) {
+            Text(stringResource(R.string.acc_more), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            ToolCategory.entries.forEach { category ->
+                val actions = visibleToolActions(category)
+                if (actions.isNotEmpty()) key(category) {
+                    Text(
+                        stringResource(category.labelRes),
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                        style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                        color = if (category == ToolCategory.DELETE) androidx.compose.material3.MaterialTheme.colorScheme.error
+                        else androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    )
+                    actions.forEach { action ->
+                        key(action) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(action.labelRes),
+                                        color = if (category == ToolCategory.DELETE) androidx.compose.material3.MaterialTheme.colorScheme.error
+                                        else androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                                    )
+                                },
+                                onClick = { onSelected(action) },
+                            )
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        }
+    }
 }
 
 @Composable

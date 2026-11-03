@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">Müddətsiz</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">Abunə məlumatları; istifadə %1$s; bitmə %2$s</string>
+    <string name="spatial_tools_service">Xidmət</string>
+    <string name="spatial_tools_export">İxrac</string>
+    <string name="spatial_tools_order">Sıra</string>
+    <string name="save_order_title">Görünüş sırasını həmişəlik saxla</string>
+    <string name="save_order_confirm">%1$s qrupunda %2$d konfiqurasiyanın saxlanan sırası %3$s olaraq dəyişəcək. Davam edilsin?</string>
+    <string name="save_order_unavailable">Qrup seçin, axtarışı və filtrləri təmizləyin, yoxlama və yüklənmənin bitməsini gözləyin.</string>
 </resources>

@@ -109,6 +109,7 @@ class MainViewModel(
     private var runGroupId = ""
     private var resumeGroupId = ""
     private var scopedTestPreparationJob: Job? = null
+    private var saveOrderPreparationJob: Job? = null
     private val runDone = HashSet<String>()
     private var runOk = 0
     private var runFailed = 0
@@ -347,8 +348,8 @@ class MainViewModel(
         when (action) {
             MainAction.Initialize -> initialize()
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
-            MainAction.TestAllServers -> testAllRealPing(true)
-            MainAction.TestRealAllServers -> testAllRealPing()
+            MainAction.TestAllServers -> prepareScopedTest(ScopedTestKind.TCP)
+            MainAction.TestRealAllServers -> prepareScopedTest(ScopedTestKind.REAL)
             is MainAction.PrepareScopedTest -> prepareScopedTest(action.kind)
             MainAction.ConfirmScopedTest -> confirmScopedTest()
             MainAction.DismissScopedTest -> _uiState.update { it.copy(scopedTestProposal = null) }
@@ -362,6 +363,9 @@ class MainViewModel(
             MainAction.RemoveDuplicateServers -> removeDuplicateServerAsync()
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
             MainAction.SortByTestResults -> sortByTestResultsAsync()
+            MainAction.PrepareSaveOrder -> prepareSaveOrder()
+            MainAction.ConfirmSaveOrder -> confirmSaveOrder()
+            MainAction.DismissSaveOrder -> _uiState.update { it.copy(saveOrderProposal = null) }
             MainAction.UpdateSubscriptions -> importConfigViaSub(uiState.value.selectedGroupId)
             is MainAction.UpdateGroupSubscription -> importConfigViaSub(action.groupId)
             MainAction.ExportAll -> exportAllAsync()
@@ -883,6 +887,71 @@ class MainViewModel(
             }
         } else {
             dataSource.removeInvalidServersInGroup("")
+        }
+    }
+
+    private fun prepareSaveOrder() {
+        val ui = _uiState.value
+        val group = ui.groups.firstOrNull { it.id == ui.selectedGroupId && it.id.isNotEmpty() }
+        if (ui.isTesting || isLoading.value || group == null || hasActiveServerFilter(keywordFilter, ui.statusFilter)) {
+            toast(R.string.save_order_unavailable)
+            return
+        }
+        val state = mutableServerGroupState(group.id).value
+        if (!scopedListReady(state, keywordFilter, ui.statusFilter) || state.appliedSort != ui.displaySort ||
+            state.totalCount != state.servers.size || state.servers.isEmpty()
+        ) {
+            toast(R.string.scoped_test_updating)
+            return
+        }
+        saveOrderPreparationJob?.cancel()
+        saveOrderPreparationJob = viewModelScope.launch {
+            val snapshot = withContext(defaultDispatcher) {
+                SaveOrderProposal(
+                    groupId = group.id,
+                    groupName = group.remarks,
+                    sort = ui.displaySort,
+                    expected = state.keywordServers.map { it.guid },
+                    proposed = state.servers.map { it.guid },
+                )
+            }
+            val current = _uiState.value
+            if (current.isTesting || isLoading.value || current.selectedGroupId != group.id ||
+                current.displaySort != ui.displaySort || current.statusFilter != ui.statusFilter ||
+                keywordFilter.isNotBlank() || mutableServerGroupState(group.id).value !== state
+            ) {
+                toast(R.string.scoped_test_updating)
+                return@launch
+            }
+            _uiState.update { it.copy(saveOrderProposal = snapshot) }
+        }
+    }
+
+    private fun confirmSaveOrder() {
+        val proposal = _uiState.value.saveOrderProposal ?: return
+        _uiState.update { it.copy(saveOrderProposal = null) }
+        if (_uiState.value.isTesting || isLoading.value || _uiState.value.groups.none { it.id == proposal.groupId }) {
+            toast(R.string.save_order_unavailable)
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val saved = withContext(ioDispatcher) {
+                    dataSource.reorderServerListIfUnchanged(proposal.groupId, proposal.expected, proposal.proposed)
+                }
+                if (!saved) {
+                    toast(R.string.scoped_test_changed)
+                    return@launch
+                }
+                withContext(ioDispatcher) { cacheMutex.withLock { groupDataCache.clear() } }
+                setupGroupTab(forceRefresh = true)
+                toastSuccess(R.string.toast_success)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to save server order", e)
+                toastError(R.string.toast_failure)
+            }
         }
     }
 

@@ -167,6 +167,9 @@ class MainRepository(
     override fun encodeServerList(guids: List<String>, groupId: String) =
         MmkvManager.encodeServerList(ArrayList(guids), groupId)
 
+    override fun reorderServerListIfUnchanged(groupId: String, expected: List<String>, proposed: List<String>): Boolean =
+        MmkvManager.reorderServerListIfUnchanged(groupId, expected, proposed)
+
     override fun removeServer(guid: String) = MmkvManager.removeServer(guid)
 
     override fun removeAllServer(): Int = MmkvManager.removeAllServer()

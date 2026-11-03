@@ -64,6 +64,7 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showSubscriptionDetails by rememberSaveable { mutableStateOf(false) }
     var showDelAllConfirm by remember { mutableStateOf(false) }
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
@@ -130,6 +131,14 @@ fun MainScreen(
         onDismissRemove = { showRemoveConfirm = null },
         onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) }
     )
+
+    uiState.saveOrderProposal?.let { proposal ->
+        SaveOrderDialog(
+            proposal = proposal,
+            onConfirm = { onAction(MainAction.ConfirmSaveOrder) },
+            onDismiss = { onAction(MainAction.DismissSaveOrder) },
+        )
+    }
 
     if (shareTarget != null) {
         val (guid, profile, more) = shareTarget!!
@@ -222,9 +231,10 @@ fun MainScreen(
                             MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
-                            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
-                            MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
-                            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
+                            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.PrepareSaveOrder)
+                            MainMoreMenuAction.GroupDetails -> showSubscriptionDetails = true
+                            MainMoreMenuAction.TestAll -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.TCP))
+                            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL))
                             MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
                         }
                     }
@@ -261,6 +271,8 @@ fun MainScreen(
                             }
                         },
                         onManageGroups = { onNavigate(MainDestination.Subscriptions) },
+                        showDetails = showSubscriptionDetails,
+                        onShowDetails = { showSubscriptionDetails = it },
                         onAction = onAction,
                     )
                     ServerListChrome(uiState = uiState, onAction = onAction)

@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">永不过期</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">订阅详情；用量 %1$s；到期 %2$s</string>
+    <string name="spatial_tools_service">服务</string>
+    <string name="spatial_tools_export">导出</string>
+    <string name="spatial_tools_order">顺序</string>
+    <string name="save_order_title">永久保存显示顺序</string>
+    <string name="save_order_confirm">分组 %1$s 中 %2$d 个配置的保存顺序将更改为：%3$s。继续吗？</string>
+    <string name="save_order_unavailable">请选择分组，清除搜索和筛选，并等待测试及加载完成。</string>
 </resources>

@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">永不過期</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">訂閱詳細資訊；用量 %1$s；到期 %2$s</string>
+    <string name="spatial_tools_service">服務</string>
+    <string name="spatial_tools_export">匯出</string>
+    <string name="spatial_tools_order">順序</string>
+    <string name="save_order_title">永久儲存顯示順序</string>
+    <string name="save_order_confirm">群組 %1$s 中 %2$d 個設定的儲存順序將變更為：%3$s。要繼續嗎？</string>
+    <string name="save_order_unavailable">請選擇群組，清除搜尋和篩選，並等待測試及載入完成。</string>
 </resources>

@@ -63,3 +63,31 @@ fun MainDialogs(
         )
     }
 }
+
+@Composable
+internal fun SaveOrderDialog(proposal: SaveOrderProposal, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val order = when (proposal.sort) {
+        ServerDisplaySort.DEFAULT -> R.string.display_sort_default
+        ServerDisplaySort.PING -> R.string.display_sort_ping
+        ServerDisplaySort.NAME -> R.string.display_sort_name
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { androidx.compose.material3.Text(stringResource(R.string.save_order_title)) },
+        text = {
+            androidx.compose.material3.Text(
+                stringResource(R.string.save_order_confirm, proposal.groupName, proposal.proposed.size, stringResource(order))
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onConfirm) {
+                androidx.compose.material3.Text(stringResource(R.string.routing_settings_save))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                androidx.compose.material3.Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}

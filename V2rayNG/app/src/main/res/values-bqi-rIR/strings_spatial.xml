@@ -115,4 +115,10 @@
     <string name="subscription_no_expiry">بدون انقضا</string>
     <string name="subscription_summary_line">%1$s · %2$s</string>
     <string name="subscription_summary_accessible">جزئیات اشتراک؛ مصرف %1$s؛ انقضا %2$s</string>
+    <string name="spatial_tools_service">سرویس</string>
+    <string name="spatial_tools_export">خروجی</string>
+    <string name="spatial_tools_order">ترتیب</string>
+    <string name="save_order_title">ذخیره دائمی ترتیب نمایشی</string>
+    <string name="save_order_confirm">ترتیب ذخیره‌شده گروه %1$s برای %2$d کانفیگ به «%3$s» تغییر می‌کند. ادامه می‌دهید؟</string>
+    <string name="save_order_unavailable">یک گروه انتخاب کنید، جست‌وجو و فیلترها را پاک کنید و منتظر پایان تست و بارگذاری بمانید.</string>
 </resources>

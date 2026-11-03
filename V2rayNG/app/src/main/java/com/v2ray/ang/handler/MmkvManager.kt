@@ -202,6 +202,17 @@ object MmkvManager {
     }
 
 
+    /** Atomically compare and replace one group index; never publish a stale or partial order. */
+    internal fun reorderServerListIfUnchanged(groupId: String, expected: List<String>, proposed: List<String>): Boolean {
+        if (groupId.isEmpty()) return false // the all-servers view is not a single group index
+        return withProfileIndexLock {
+            val current = decodeServerList(groupId)
+            if (!validServerOrderChange(current, expected, proposed)) return@withProfileIndexLock false
+            requireStorageWrite(persistServerList(proposed, groupId), "Failed to save server order")
+            true
+        }
+    }
+
     /**
      * Decodes the server list for a given subscription.
      * If subscriptionId is empty, returns ungrouped servers.
