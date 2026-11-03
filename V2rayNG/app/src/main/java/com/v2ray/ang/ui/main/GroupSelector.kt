@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
@@ -21,7 +21,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -95,37 +94,38 @@ internal fun GroupSelector(
             onDismissRequest = { showGroups = false },
             title = { Text(stringResource(R.string.spatial_choose_group)) },
             text = {
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState())
                         .navigationBarsPadding()
                         .imePadding(),
                 ) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.menu_item_search)) },
-                        singleLine = true,
-                    )
-                    if (visibleGroups.isEmpty()) {
-                        Text(
-                            stringResource(R.string.spatial_no_matching_groups),
-                            modifier = Modifier.padding(vertical = 16.dp),
+                    item(key = "search") {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.menu_item_search)) },
+                            singleLine = true,
                         )
                     }
-                    visibleGroups.forEach { group ->
-                        key(group.id) {
-                            GroupChoice(
-                                group = group,
-                                label = groupLabel(groups, group),
-                                selected = group.id == selectedGroupId,
-                                mainViewModel = mainViewModel,
-                                onSelect = { showGroups = false; onSelectGroup(group.id) },
+                    if (visibleGroups.isEmpty()) {
+                        item(key = "empty") {
+                            Text(
+                                stringResource(R.string.spatial_no_matching_groups),
+                                modifier = Modifier.padding(vertical = 16.dp),
                             )
                         }
+                    }
+                    items(visibleGroups, key = { "group:${it.id}" }) { group ->
+                        GroupChoice(
+                            group = group,
+                            label = groupLabel(groups, group),
+                            selected = group.id == selectedGroupId,
+                            mainViewModel = mainViewModel,
+                            onSelect = { showGroups = false; onSelectGroup(group.id) },
+                        )
                     }
                 }
             },
