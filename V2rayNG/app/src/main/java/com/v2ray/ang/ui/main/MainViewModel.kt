@@ -671,12 +671,14 @@ class MainViewModel(
                 groupServerFlows.keys.removeAll { it !in validIds }
                 groupLoadMutexes.keys.removeAll { it !in validIds }
 
-                _uiState.update {
-                    it.copy(
-                        groups = groups,
-                        selectedGroupId = selectedGroup,
-                        selectedGuid = dataSource.getSelectServer(),
-                    )
+                val selectedBeforeRead = _uiState.value.selectedGuid
+                val persistedSelected = dataSource.getSelectServer()
+                _uiState.update { it.copy(groups = groups, selectedGroupId = selectedGroup) }
+                withContext(Dispatchers.Main.immediate) {
+                    // A selection made while the IO read was pending is newer than this snapshot.
+                    if (_uiState.value.selectedGuid == selectedBeforeRead) {
+                        applySelectedGuid(persistedSelected)
+                    }
                 }
                 refreshSelectedInfo()
                 groups.forEach { mutableServerGroupState(it.id) }
@@ -1085,14 +1087,22 @@ class MainViewModel(
         }
     }
 
+    /** Called on the main thread, where request ownership is maintained. */
+    private fun applySelectedGuid(guid: String?) {
+        if (_uiState.value.selectedGuid == guid) return
+        // Results from the previous active connection must not update the new selection.
+        testRequests.invalidateCurrent()
+        _uiState.update { stateAfterSelectionChange(it, guid, testRequests.bulk != null) }
+    }
+
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
-        _uiState.update { it.copy(selectedGuid = guid) }
+        applySelectedGuid(guid)
         refreshSelectedInfo()
     }
 
     fun refreshSelectedGuid() {
-        _uiState.update { it.copy(selectedGuid = dataSource.getSelectServer()) }
+        applySelectedGuid(dataSource.getSelectServer())
         refreshSelectedInfo()
     }
 

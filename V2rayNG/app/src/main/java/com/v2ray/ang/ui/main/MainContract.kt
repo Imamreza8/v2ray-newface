@@ -204,6 +204,23 @@ data class MainUiState(
     val speedTest: SpeedTestState = SpeedTestState.Idle,
 )
 
+/** A new selection cannot inherit a previous active-connection measurement. */
+internal fun stateAfterSelectionChange(state: MainUiState, guid: String?, bulkActive: Boolean): MainUiState {
+    if (state.selectedGuid == guid) return state
+    val base = if (state.isRunning) MainStatus.Connected else MainStatus.Disconnected
+    return state.copy(
+        selectedGuid = guid,
+        selectedInfo = null,
+        isTesting = bulkActive,
+        status = when {
+            !bulkActive -> base
+            state.status is MainStatus.TestProgress -> state.status
+            else -> MainStatus.Testing
+        },
+        connectionStatus = base,
+    )
+}
+
 /**
  * All possible user interaction intents
  */
