@@ -30,6 +30,17 @@ import com.v2ray.ang.util.Utils
 import okhttp3.Headers
 import java.net.URI
 
+/** Return a link only for supported formats with a nonempty encoded body. */
+internal fun formatShareLink(type: EConfigType, encode: () -> String): String {
+    when (type) {
+        EConfigType.VMESS, EConfigType.SHADOWSOCKS, EConfigType.SOCKS, EConfigType.VLESS,
+        EConfigType.TROJAN, EConfigType.WIREGUARD, EConfigType.HYSTERIA2 -> Unit
+        else -> return ""
+    }
+    val body = encode()
+    return if (body.isBlank()) "" else type.protocolScheme + body
+}
+
 object AngConfigManager {
 
     private data class ParsedProfile(
@@ -157,15 +168,17 @@ object AngConfigManager {
         try {
             val config = MmkvManager.decodeServerConfig(guid) ?: return ""
 
-            return config.configType.protocolScheme + when (config.configType) {
-                EConfigType.VMESS -> VmessFmt.toUri(config)
-                EConfigType.SHADOWSOCKS -> ShadowsocksFmt.toUri(config)
-                EConfigType.SOCKS -> SocksFmt.toUri(config)
-                EConfigType.VLESS -> VlessFmt.toUri(config)
-                EConfigType.TROJAN -> TrojanFmt.toUri(config)
-                EConfigType.WIREGUARD -> WireguardFmt.toUri(config)
-                EConfigType.HYSTERIA2 -> Hysteria2Fmt.toUri(config)
-                else -> {}
+            return formatShareLink(config.configType) {
+                when (config.configType) {
+                    EConfigType.VMESS -> VmessFmt.toUri(config)
+                    EConfigType.SHADOWSOCKS -> ShadowsocksFmt.toUri(config)
+                    EConfigType.SOCKS -> SocksFmt.toUri(config)
+                    EConfigType.VLESS -> VlessFmt.toUri(config)
+                    EConfigType.TROJAN -> TrojanFmt.toUri(config)
+                    EConfigType.WIREGUARD -> WireguardFmt.toUri(config)
+                    EConfigType.HYSTERIA2 -> Hysteria2Fmt.toUri(config)
+                    else -> ""
+                }
             }
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share config for GUID: $guid", e)
