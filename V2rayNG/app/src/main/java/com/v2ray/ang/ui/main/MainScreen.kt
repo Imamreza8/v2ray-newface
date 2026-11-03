@@ -280,7 +280,9 @@ fun MainScreen(
                             locateTarget = uiState.locateTarget,
                             doubleColumnDisplay = doubleColumnDisplay,
                             // Reordering is only allowed on the unfiltered list; a status filter counts as filtering.
-                            searchQuery = if (uiState.statusFilter != ServerStatusFilter.ALL || uiState.isTesting) "*" else searchQuery,
+                            searchQuery = if (uiState.statusFilter != ServerStatusFilter.ALL || uiState.isTesting ||
+                                uiState.displaySort != ServerDisplaySort.DEFAULT
+                            ) "*" else searchQuery,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },

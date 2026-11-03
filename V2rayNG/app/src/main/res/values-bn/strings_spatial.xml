@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">গ্রুপ বা নিশ্চিত কনফিগ বদলেছে। পরীক্ষা আবার বেছে নিন।</string>
     <string name="scoped_test_requires_connection">বর্তমান সংযোগ পরীক্ষা করতে প্রথমে সংযুক্ত হন।</string>
     <string name="scoped_test_no_auto_actions">নির্দিষ্ট পরিসরের পরীক্ষা স্বয়ংক্রিয়ভাবে কনফিগ মুছে বা সাজায় না।</string>
+    <string name="display_sort">প্রদর্শনের ক্রম</string>
+    <string name="display_sort_default">সংরক্ষিত ক্রম</string>
+    <string name="display_sort_ping">পিং (দ্রুততম আগে)</string>
+    <string name="display_sort_name">নাম</string>
+    <string name="scoped_test_top_note">সেরাগুলি দেখানো বিলম্ব ও সীমা অনুযায়ী; আগের ফল TCP হতে পারে।</string>
 </resources>

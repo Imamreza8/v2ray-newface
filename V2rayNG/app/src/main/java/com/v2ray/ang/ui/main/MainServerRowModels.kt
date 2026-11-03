@@ -28,6 +28,7 @@ internal data class ServerGroupUiState(
     val keywordRows: List<ServerRowUiModel> = emptyList(),
     val keyword: String = "",
     val appliedFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val appliedSort: ServerDisplaySort = ServerDisplaySort.DEFAULT,
     val topMaxMillis: Long = 0L,
     val counts: FilterCounts = FilterCounts(),
 )

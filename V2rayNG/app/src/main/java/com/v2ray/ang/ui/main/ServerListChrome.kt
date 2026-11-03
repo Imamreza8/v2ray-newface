@@ -16,6 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
@@ -97,6 +101,10 @@ internal fun ServerListChrome(
                     contentDescription = stringResource(R.string.scoped_test_options),
                 )
             }
+            DisplaySortMenu(
+                selected = uiState.displaySort,
+                onSelect = { onAction(MainAction.SetDisplaySort(it)) },
+            )
             ServerFilterBar(
                 modifier = Modifier.weight(1f),
                 selected = uiState.statusFilter,
@@ -211,6 +219,7 @@ private fun ScopedTestConfirmDialog(proposal: ScopedTestProposal, onConfirm: () 
                     if (isCurrent) stringResource(R.string.scoped_test_current_scope)
                     else stringResource(R.string.scoped_test_scope, proposal.guids.size, proposal.groupName, filterLabel)
                 )
+                if (proposal.kind == ScopedTestKind.TOP) Text(stringResource(R.string.scoped_test_top_note))
                 if (!isCurrent && proposal.searchActive) Text(stringResource(R.string.scoped_test_search))
                 if (!isCurrent && proposal.guids.isEmpty()) Text(stringResource(R.string.scoped_test_empty))
                 if (!isCurrent) Text(stringResource(R.string.scoped_test_no_auto_actions))
@@ -231,4 +240,28 @@ private fun scopedTestLabel(kind: ScopedTestKind): Int = when (kind) {
     ScopedTestKind.TOP -> R.string.scoped_test_top
     ScopedTestKind.FAILED -> R.string.scoped_test_failed
     ScopedTestKind.CURRENT -> R.string.scoped_test_current
+}
+
+@Composable
+private fun DisplaySortMenu(selected: ServerDisplaySort, onSelect: (ServerDisplaySort) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(painterResource(R.drawable.ic_sort_display_24dp), stringResource(R.string.display_sort))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ServerDisplaySort.entries.forEach { sort ->
+                val label = when (sort) {
+                    ServerDisplaySort.DEFAULT -> R.string.display_sort_default
+                    ServerDisplaySort.PING -> R.string.display_sort_ping
+                    ServerDisplaySort.NAME -> R.string.display_sort_name
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    modifier = Modifier.semantics { this.selected = sort == selected },
+                    onClick = { expanded = false; onSelect(sort) },
+                )
+            }
+        }
+    }
 }

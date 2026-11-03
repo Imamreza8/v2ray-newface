@@ -48,6 +48,9 @@ data class SelectedServerInfo(
 /** Quick filter of the server list by test result. */
 enum class ServerStatusFilter { ALL, TOP, ALIVE, UNTESTED, FAILED }
 
+/** Presentation only; never written to the saved subscription order. */
+enum class ServerDisplaySort { DEFAULT, PING, NAME }
+
 /** Filters are evaluated using the same ping value shown in server rows. */
 internal fun matchesServerStatus(delay: Long, filter: ServerStatusFilter, topMaxMillis: Long): Boolean =
     when (filter) {
@@ -135,6 +138,7 @@ data class MainUiState(
     val spatialExpanded: Boolean = true,
     val reduceMotion: Boolean = false,
     val statusFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val displaySort: ServerDisplaySort = ServerDisplaySort.DEFAULT,
     val filterCounts: FilterCounts = FilterCounts(),
     val simpleMode: Boolean = false,
     val expandProposal: ExpandProposal? = null,
@@ -198,6 +202,7 @@ sealed interface MainAction {
     data class SetSpatialExpanded(val expanded: Boolean) : MainAction
     data class SetReduceMotion(val reduce: Boolean) : MainAction
     data class SetStatusFilter(val filter: ServerStatusFilter) : MainAction
+    data class SetDisplaySort(val sort: ServerDisplaySort) : MainAction
     data object RefreshTop : MainAction
     data class SetTopFilter(
         val limit: Int,

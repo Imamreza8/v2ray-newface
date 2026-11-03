@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">群組或已確認的設定已變更，請重新選擇測試。</string>
     <string name="scoped_test_requires_connection">請先連線，再測試目前連線。</string>
     <string name="scoped_test_no_auto_actions">範圍測試不會自動刪除或重新排序設定。</string>
+    <string name="display_sort">顯示排序</string>
+    <string name="display_sort_default">儲存的順序</string>
+    <string name="display_sort_ping">延遲（最快優先）</string>
+    <string name="display_sort_name">名稱</string>
+    <string name="scoped_test_top_note">最佳設定依據顯示的延遲和門檻；先前結果可能是 TCP 檢查。</string>
 </resources>

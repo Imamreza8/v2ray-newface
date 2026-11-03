@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">Группа или подтверждённые профили изменились. Выберите тест заново.</string>
     <string name="scoped_test_requires_connection">Сначала подключитесь, чтобы проверить текущее соединение.</string>
     <string name="scoped_test_no_auto_actions">Тест выбранной области не удаляет и не сортирует профили автоматически.</string>
+    <string name="display_sort">Сортировка отображения</string>
+    <string name="display_sort_default">Сохранённый порядок</string>
+    <string name="display_sort_ping">Пинг (быстрые сначала)</string>
+    <string name="display_sort_name">Имя</string>
+    <string name="scoped_test_top_note">Лучшие выбираются по показанной задержке и порогу; прежний результат может быть TCP-проверкой.</string>
 </resources>

@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">Qrup və ya təsdiqlənmiş konfiqurasiyalar dəyişdi. Yoxlamanı yenidən seçin.</string>
     <string name="scoped_test_requires_connection">Cari bağlantını yoxlamaq üçün əvvəlcə qoşulun.</string>
     <string name="scoped_test_no_auto_actions">Əhatəli yoxlamalar konfiqurasiyaları avtomatik silmir və sıralamır.</string>
+    <string name="display_sort">Görünüş sırası</string>
+    <string name="display_sort_default">Saxlanılan sıra</string>
+    <string name="display_sort_ping">Pinq (ən sürətli əvvəl)</string>
+    <string name="display_sort_name">Ad</string>
+    <string name="scoped_test_top_note">Ən yaxşılar göstərilən gecikmə və həddə əsaslanır; əvvəlki nəticə TCP ola bilər.</string>
 </resources>

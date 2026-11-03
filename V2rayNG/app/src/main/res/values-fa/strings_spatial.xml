@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">گروه یا کانفیگ‌های تأییدشده تغییر کرده‌اند. تست را دوباره انتخاب کنید.</string>
     <string name="scoped_test_requires_connection">برای تست اتصال فعلی ابتدا متصل شوید.</string>
     <string name="scoped_test_no_auto_actions">تست محدوده‌ای کانفیگ‌ها را خودکار حذف یا مرتب نمی‌کند.</string>
+    <string name="display_sort">مرتب‌سازی نمایشی</string>
+    <string name="display_sort_default">ترتیب ذخیره‌شده</string>
+    <string name="display_sort_ping">پینگ (کمترین اول)</string>
+    <string name="display_sort_name">نام</string>
+    <string name="scoped_test_top_note">برترها بر اساس پینگ نمایش‌داده‌شده و آستانه فعلی هستند؛ نتیجه قبلی ممکن است TCP باشد.</string>
 </resources>

@@ -99,4 +99,9 @@
     <string name="scoped_test_changed">The group or confirmed configs changed. Choose the test again.</string>
     <string name="scoped_test_requires_connection">Connect first to test the current connection.</string>
     <string name="scoped_test_no_auto_actions">Scoped tests do not automatically delete or reorder configs.</string>
+    <string name="display_sort">Display sort</string>
+    <string name="display_sort_default">Saved order</string>
+    <string name="display_sort_ping">Ping (fastest first)</string>
+    <string name="display_sort_name">Name</string>
+    <string name="scoped_test_top_note">Top is based on the displayed delay and threshold; previous results may be TCP checks.</string>
 </resources>

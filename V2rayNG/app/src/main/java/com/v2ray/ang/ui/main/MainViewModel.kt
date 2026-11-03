@@ -274,7 +274,7 @@ class MainViewModel(
                     val current = stateFlow.value
                     if (current.totalCount == null) continue
                     if (current.keyword != keywordFilter || current.appliedFilter != statusFilter ||
-                        current.topMaxMillis != TopConfigManager.getMaxDelayMillis()
+                        current.appliedSort != uiState.value.displaySort || current.topMaxMillis != TopConfigManager.getMaxDelayMillis()
                     ) {
                         renderGroupUi(groupId, servers)
                     } else {
@@ -399,6 +399,7 @@ class MainViewModel(
                 _uiState.update { it.copy(expandProposal = null) }
             }
             is MainAction.SetStatusFilter -> setStatusFilter(action.filter)
+            is MainAction.SetDisplaySort -> setDisplaySort(action.sort)
             MainAction.RefreshTop -> loadTop()
             is MainAction.SetTopFilter -> setTopFilter(
                 action.limit, action.maxDelayMillis, action.countryCode, action.countrySource
@@ -522,6 +523,7 @@ class MainViewModel(
     private suspend fun renderGroupUi(groupId: String, servers: List<ServersCache>) {
         val query = keywordFilter
         val filter = statusFilter
+        val sort = uiState.value.displaySort
         val topMax = TopConfigManager.getMaxDelayMillis()
         val keywordServers = applyKeywordFilter(servers, query)
         val keywordRows = buildServerRows(groupId, keywordServers)
@@ -534,14 +536,16 @@ class MainViewModel(
             }
         }
         val counts = countServerStatuses(keywordServers, topMax)
+        val (sortedServers, sortedRows) = sortVisibleServerRows(visibleServers, visibleRows, sort)
         mutableServerGroupState(groupId).value = ServerGroupUiState(
-            servers = visibleServers,
-            rows = visibleRows,
+            servers = sortedServers,
+            rows = sortedRows,
             totalCount = servers.size,
             keywordServers = keywordServers,
             keywordRows = keywordRows,
             keyword = query,
             appliedFilter = filter,
+            appliedSort = sort,
             topMaxMillis = topMax,
             counts = counts,
         )
@@ -561,6 +565,20 @@ class MainViewModel(
                 if (state.totalCount != null && state.keyword == keywordFilter) {
                     publishFilterCounts(groupId, state.counts)
                 }
+            }
+        }
+    }
+
+    private fun setDisplaySort(sort: ServerDisplaySort) {
+        if (uiState.value.displaySort == sort) return
+        _uiState.update { it.copy(displaySort = sort) }
+        filterJob?.cancel()
+        filterJob = viewModelScope.launch(defaultDispatcher) {
+            val snapshot = cacheMutex.withLock { groupDataCache.toMap() }
+            ensureActive()
+            snapshot.forEach { (groupId, servers) ->
+                ensureActive()
+                updateGroupUi(groupId, servers)
             }
         }
     }
@@ -1000,8 +1018,13 @@ class MainViewModel(
     }
 
     fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
-        if (uiState.value.isTesting) return
+        if (uiState.value.isTesting || uiState.value.displaySort != ServerDisplaySort.DEFAULT ||
+            groupId.isEmpty() || hasActiveServerFilter(keywordFilter, statusFilter)
+        ) return
         val groupState = mutableServerGroupState(groupId).value
+        if (groupState.appliedSort != ServerDisplaySort.DEFAULT ||
+            !scopedListReady(groupState, keywordFilter, statusFilter)
+        ) return
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return
         val rows = groupState.rows.toMutableList()
@@ -1060,14 +1083,14 @@ class MainViewModel(
         val group = ui.groups.firstOrNull { it.id == ui.selectedGroupId } ?: return
         val state = mutableServerGroupState(group.id).value
         val keyword = keywordFilter
-        if (!scopedListReady(state, keyword, ui.statusFilter)) {
+        if (!scopedListReady(state, keyword, ui.statusFilter) || state.appliedSort != ui.displaySort) {
             toast(R.string.scoped_test_updating)
             return
         }
         scopedTestPreparationJob = viewModelScope.launch {
             val guids = withContext(defaultDispatcher) { scopedTestGuids(kind, state.servers, state.topMaxMillis) }
             val current = _uiState.value
-            if (current.isTesting || current.selectedGroupId != group.id || current.statusFilter != ui.statusFilter ||
+            if (current.isTesting || current.selectedGroupId != group.id || current.statusFilter != ui.statusFilter || current.displaySort != ui.displaySort ||
                 keywordFilter != keyword || mutableServerGroupState(group.id).value !== state
             ) {
                 toast(R.string.scoped_test_updating)

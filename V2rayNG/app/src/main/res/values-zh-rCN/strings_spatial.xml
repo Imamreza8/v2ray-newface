@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">分组或已确认的配置发生变化，请重新选择测试。</string>
     <string name="scoped_test_requires_connection">请先连接，再测试当前连接。</string>
     <string name="scoped_test_no_auto_actions">范围测试不会自动删除或重新排序配置。</string>
+    <string name="display_sort">显示排序</string>
+    <string name="display_sort_default">保存的顺序</string>
+    <string name="display_sort_ping">延迟（最快优先）</string>
+    <string name="display_sort_name">名称</string>
+    <string name="scoped_test_top_note">最佳配置依据显示的延迟和阈值；先前结果可能是 TCP 检查。</string>
 </resources>

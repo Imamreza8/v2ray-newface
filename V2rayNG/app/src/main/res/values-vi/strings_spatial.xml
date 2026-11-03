@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">Nhóm hoặc cấu hình đã xác nhận thay đổi. Hãy chọn lại phép kiểm tra.</string>
     <string name="scoped_test_requires_connection">Hãy kết nối trước khi kiểm tra kết nối hiện tại.</string>
     <string name="scoped_test_no_auto_actions">Kiểm tra theo phạm vi không tự động xóa hoặc sắp xếp cấu hình.</string>
+    <string name="display_sort">Sắp xếp hiển thị</string>
+    <string name="display_sort_default">Thứ tự đã lưu</string>
+    <string name="display_sort_ping">Ping (nhanh nhất trước)</string>
+    <string name="display_sort_name">Tên</string>
+    <string name="scoped_test_top_note">Mục tốt nhất dựa trên độ trễ hiển thị và ngưỡng; kết quả trước đó có thể là kiểm tra TCP.</string>
 </resources>

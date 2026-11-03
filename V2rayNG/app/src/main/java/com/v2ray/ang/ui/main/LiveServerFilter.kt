@@ -32,6 +32,29 @@ internal fun updateStatusCounts(counts: FilterCounts, before: Long?, after: Long
     )
 }
 
+/** Sort paired visible models without mutating their source lists or saved order. Ties stay stable. */
+internal fun sortVisibleServerRows(
+    servers: List<ServersCache>,
+    rows: List<ServerRowUiModel>,
+    sort: ServerDisplaySort,
+): Pair<List<ServersCache>, List<ServerRowUiModel>> {
+    require(servers.size == rows.size)
+    if (sort == ServerDisplaySort.DEFAULT) return servers to rows
+    val pairs = servers.zip(rows)
+    require(pairs.all { (server, row) -> server.guid == row.guid })
+    val sorted = when (sort) {
+        ServerDisplaySort.DEFAULT -> pairs
+        ServerDisplaySort.PING -> pairs.sortedWith(compareBy<Pair<ServersCache, ServerRowUiModel>>(
+            { (server, _) -> if (server.testDelayMillis > 0L) 0 else if (server.testDelayMillis == 0L) 1 else 2 },
+            { (server, _) -> if (server.testDelayMillis > 0L) server.testDelayMillis else 0L },
+        ))
+        ServerDisplaySort.NAME -> pairs.sortedWith { a, b ->
+            a.second.remarks.compareTo(b.second.remarks, ignoreCase = true)
+        }
+    }
+    return sorted.map { it.first } to sorted.map { it.second }
+}
+
 /** Apply one batch to keyword-matched items. Only changed IDs recalculate status membership and counters. */
 internal fun applyLiveServerResults(
     state: ServerGroupUiState,
@@ -59,9 +82,10 @@ internal fun applyLiveServerResults(
         else matchesServerStatus(delay, state.appliedFilter, state.topMaxMillis)
         if (visible) { visibleServers.add(server); visibleRows.add(row) }
     }
+    val (sortedServers, sortedRows) = sortVisibleServerRows(visibleServers, visibleRows, state.appliedSort)
     return state.copy(
-        servers = visibleServers,
-        rows = visibleRows,
+        servers = sortedServers,
+        rows = sortedRows,
         keywordServers = keywordServers,
         keywordRows = keywordRows,
         counts = counts,

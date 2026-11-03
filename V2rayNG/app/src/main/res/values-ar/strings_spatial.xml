@@ -98,4 +98,9 @@
     <string name="scoped_test_changed">تغيرت المجموعة أو الإعدادات المؤكدة. اختر الاختبار مجدداً.</string>
     <string name="scoped_test_requires_connection">اتصل أولاً لاختبار الاتصال الحالي.</string>
     <string name="scoped_test_no_auto_actions">لا تحذف الاختبارات المحددة الإعدادات أو ترتبها تلقائياً.</string>
+    <string name="display_sort">ترتيب العرض</string>
+    <string name="display_sort_default">الترتيب المحفوظ</string>
+    <string name="display_sort_ping">التأخير (الأسرع أولاً)</string>
+    <string name="display_sort_name">الاسم</string>
+    <string name="scoped_test_top_note">يستند الأفضل إلى التأخير المعروض والحد الحالي؛ قد تكون النتائج السابقة فحص TCP.</string>
 </resources>
