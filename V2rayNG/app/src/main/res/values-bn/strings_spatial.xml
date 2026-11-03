@@ -128,4 +128,5 @@
     <string name="export_scope_group">গ্রুপ %1$s (%2$d কনফিগ)</string>
     <string name="export_scope_visible">দৃশ্যমান ফিল্টার (%1$d কনফিগ)</string>
     <string name="export_scope_selected">নির্বাচিত কনফিগ (%1$d)</string>
+    <string name="export_scope_changed">গ্রুপ বা নিশ্চিত করা কনফিগ বদলেছে। আবার রপ্তানির পরিসর বেছে নিন।</string>
 </resources>

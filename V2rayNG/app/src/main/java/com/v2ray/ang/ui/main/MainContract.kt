@@ -116,6 +116,8 @@ data class ExportProposal(
     val groupGuids: List<String>,
     val visibleGuids: List<String>,
     val selectedGuid: String?,
+    val filter: ServerStatusFilter,
+    val searchActive: Boolean,
 )
 
 internal fun exportScopeGuids(proposal: ExportProposal, scope: ExportScope): List<String> = when (scope) {

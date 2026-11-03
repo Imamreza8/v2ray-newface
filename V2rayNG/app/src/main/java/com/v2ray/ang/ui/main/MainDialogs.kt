@@ -127,13 +127,27 @@ internal fun ExportScopeDialog(proposal: ExportProposal, onConfirm: (ExportScope
                         androidx.compose.material3.Text(label)
                     }
                 }
+                if (scope == ExportScope.VISIBLE) {
+                    val filterLabel = when (proposal.filter) {
+                        ServerStatusFilter.ALL -> R.string.filter_all
+                        ServerStatusFilter.TOP -> R.string.filter_top
+                        ServerStatusFilter.ALIVE -> R.string.filter_alive
+                        ServerStatusFilter.UNTESTED -> R.string.filter_untested
+                        ServerStatusFilter.FAILED -> R.string.filter_failed
+                    }
+                    androidx.compose.material3.Text(
+                        stringResource(R.string.scoped_test_scope, proposal.visibleGuids.size, proposal.groupName,
+                            stringResource(filterLabel, proposal.visibleGuids.size))
+                    )
+                    if (proposal.searchActive) androidx.compose.material3.Text(stringResource(R.string.scoped_test_search))
+                }
             }
         },
         confirmButton = {
             androidx.compose.material3.TextButton(
                 onClick = { onConfirm(scope) },
                 enabled = exportScopeGuids(proposal, scope).isNotEmpty(),
-            ) { androidx.compose.material3.Text(stringResource(R.string.spatial_speed_start)) }
+            ) { androidx.compose.material3.Text(stringResource(R.string.menu_item_export_proxy_app)) }
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text(stringResource(R.string.action_cancel)) }

@@ -128,4 +128,5 @@
     <string name="export_scope_group">分组 %1$s（%2$d 个配置）</string>
     <string name="export_scope_visible">当前筛选（%1$d 个配置）</string>
     <string name="export_scope_selected">选中的配置（%1$d）</string>
+    <string name="export_scope_changed">分组或已确认的配置已更改，请重新选择导出范围。</string>
 </resources>

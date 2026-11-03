@@ -128,4 +128,5 @@
     <string name="export_scope_group">Группа %1$s (%2$d профилей)</string>
     <string name="export_scope_visible">Видимый фильтр (%1$d профилей)</string>
     <string name="export_scope_selected">Выбранный профиль (%1$d)</string>
+    <string name="export_scope_changed">Группа или подтверждённые профили изменились. Выберите область экспорта заново.</string>
 </resources>

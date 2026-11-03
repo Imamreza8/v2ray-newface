@@ -128,4 +128,5 @@
     <string name="export_scope_group">گروه %1$s (%2$d کانفیگ)</string>
     <string name="export_scope_visible">فیلتر نمایان (%1$d کانفیگ)</string>
     <string name="export_scope_selected">کانفیگ انتخاب‌شده (%1$d)</string>
+    <string name="export_scope_changed">گروه یا کانفیگ‌های تأییدشده تغییر کرده‌اند. دوباره محدوده خروجی را انتخاب کنید.</string>
 </resources>

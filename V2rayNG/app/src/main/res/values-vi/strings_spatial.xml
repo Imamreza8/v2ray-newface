@@ -128,4 +128,5 @@
     <string name="export_scope_group">Nhóm %1$s (%2$d cấu hình)</string>
     <string name="export_scope_visible">Bộ lọc đang thấy (%1$d cấu hình)</string>
     <string name="export_scope_selected">Cấu hình đã chọn (%1$d)</string>
+    <string name="export_scope_changed">Nhóm hoặc cấu hình đã xác nhận đã thay đổi. Hãy chọn lại phạm vi xuất.</string>
 </resources>

@@ -801,6 +801,8 @@ class MainViewModel(
                     groupGuids = source.map { it.guid }.filter { it.isNotBlank() }.distinct(),
                     visibleGuids = state.servers.map { it.guid }.filter { it.isNotBlank() }.distinct(),
                     selectedGuid = ui.selectedGuid?.takeIf { it.isNotBlank() },
+                    filter = ui.statusFilter,
+                    searchActive = keyword.isNotBlank(),
                 )
             } ?: run { toast(R.string.scoped_test_updating); return@launch }
             val current = _uiState.value
@@ -821,7 +823,7 @@ class MainViewModel(
         val guids = exportScopeGuids(proposal, scope)
         if (guids.isEmpty()) return
         if (scope != ExportScope.SELECTED && _uiState.value.groups.none { it.id == proposal.groupId }) {
-            toast(R.string.scoped_test_changed)
+            toast(R.string.export_scope_changed)
             return
         }
         viewModelScope.launch {
@@ -834,7 +836,7 @@ class MainViewModel(
                     dataSource.shareNonCustomConfigsToClipboard(guids)
                 }
                 when {
-                    count == null -> toast(R.string.scoped_test_changed)
+                    count == null -> toast(R.string.export_scope_changed)
                     count > 0 -> toast(dataSource.getString(R.string.title_export_config_count, count))
                     else -> toastError(R.string.toast_failure)
                 }

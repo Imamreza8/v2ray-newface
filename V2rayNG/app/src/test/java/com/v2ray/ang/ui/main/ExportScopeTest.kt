@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class ExportScopeTest {
     @Test
     fun scopeSelectsOnlyTheFrozenIdsAndHandlesNoSelection() {
-        val proposal = ExportProposal("group", "Name", listOf("a", "b", "c"), listOf("b"), "c")
+        val proposal = ExportProposal("group", "Name", listOf("a", "b", "c"), listOf("b"), "c", ServerStatusFilter.FAILED, true)
         assertEquals(listOf("a", "b", "c"), exportScopeGuids(proposal, ExportScope.GROUP))
         assertEquals(listOf("b"), exportScopeGuids(proposal, ExportScope.VISIBLE))
         assertEquals(listOf("c"), exportScopeGuids(proposal, ExportScope.SELECTED))
