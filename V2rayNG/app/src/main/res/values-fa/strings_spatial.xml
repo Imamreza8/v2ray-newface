@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$dس</string>
     <string name="result_age_days_short">%1$dر</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">متصل · نیاز به تست</string>
+    <string name="connection_compact_delay">متصل · %1$s</string>
+    <string name="connection_compact_country">متصل · %1$s · %2$s</string>
+    <string name="connection_open_details">نمایش جزئیات اتصال</string>
+    <string name="subscription_no_expiry">بدون انقضا</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">جزئیات اشتراک؛ مصرف %1$s؛ انقضا %2$s</string>
 </resources>

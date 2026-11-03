@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$d时</string>
     <string name="result_age_days_short">%1$d天</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">已连接 · 需要测试</string>
+    <string name="connection_compact_delay">已连接 · %1$s</string>
+    <string name="connection_compact_country">已连接 · %1$s · %2$s</string>
+    <string name="connection_open_details">打开连接详情</string>
+    <string name="subscription_no_expiry">永不过期</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">订阅详情；用量 %1$s；到期 %2$s</string>
 </resources>

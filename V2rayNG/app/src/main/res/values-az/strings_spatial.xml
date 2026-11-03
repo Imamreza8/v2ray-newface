@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$d s</string>
     <string name="result_age_days_short">%1$d gün</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">Qoşuldu · yoxlama lazımdır</string>
+    <string name="connection_compact_delay">Qoşuldu · %1$s</string>
+    <string name="connection_compact_country">Qoşuldu · %1$s · %2$s</string>
+    <string name="connection_open_details">Bağlantı məlumatlarını aç</string>
+    <string name="subscription_no_expiry">Müddətsiz</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">Abunə məlumatları; istifadə %1$s; bitmə %2$s</string>
 </resources>

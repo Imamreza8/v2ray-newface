@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$dч</string>
     <string name="result_age_days_short">%1$dд</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">Подключено · нужна проверка</string>
+    <string name="connection_compact_delay">Подключено · %1$s</string>
+    <string name="connection_compact_country">Подключено · %1$s · %2$s</string>
+    <string name="connection_open_details">Открыть сведения о соединении</string>
+    <string name="subscription_no_expiry">Бессрочно</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">Сведения о подписке; использовано %1$s; срок %2$s</string>
 </resources>

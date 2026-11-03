@@ -233,6 +233,7 @@ fun MainScreen(
             bottomBar = {
                 MainBottomBar(
                     displayText = bottomText,
+                    connectionStatus = uiState.connectionStatus,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
                     onAction = onAction

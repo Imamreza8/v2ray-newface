@@ -4,6 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,13 +15,19 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
@@ -40,11 +49,41 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainBottomBar(
     displayText: String,
+    connectionStatus: MainStatus,
     isRunning: Boolean,
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    var showConnectionDetails by rememberSaveable { mutableStateOf(false) }
+    val result = (connectionStatus as? MainStatus.ConnectionTest)?.result
+    val compactText = when (connectionSummaryKind(connectionStatus)) {
+        ConnectionSummaryKind.NEEDS_TEST -> stringResource(R.string.connection_compact_needs_test)
+        ConnectionSummaryKind.SUCCESS -> stringResource(
+            R.string.connection_compact_delay, stringResource(R.string.server_test_delay_value, result!!.delayMillis),
+        )
+        ConnectionSummaryKind.SUCCESS_WITH_COUNTRY -> stringResource(
+            R.string.connection_compact_country,
+            stringResource(R.string.server_test_delay_value, result!!.delayMillis), result.country.orEmpty(),
+        )
+        ConnectionSummaryKind.OTHER -> displayText.lineSequence().firstOrNull().orEmpty()
+    }
+    if (showConnectionDetails) {
+        AlertDialog(
+            onDismissRequest = { showConnectionDetails = false },
+            title = { Text(stringResource(R.string.spatial_connection)) },
+            text = { Text(displayText, modifier = Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = {
+                TextButton(enabled = isRunning, onClick = {
+                    showConnectionDetails = false
+                    onAction(MainAction.TestCurrentServer)
+                }) { Text(stringResource(R.string.scoped_test_current)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConnectionDetails = false }) { Text(stringResource(R.string.action_close)) }
+            },
+        )
+    }
     val rotationAnim = remember { Animatable(0f) }
     LaunchedEffect(isRunning) {
         if (!isRunning) rotationAnim.snapTo(0f)
@@ -61,15 +100,17 @@ fun MainBottomBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = displayText,
+                text = compactText,
                 style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
                     .clickable(
                         role = Role.Button,
-                        onClickLabel = stringResource(R.string.connection_test_pending),
-                        onClick = { onAction(MainAction.TestCurrentServer) },
+                        onClickLabel = stringResource(R.string.connection_open_details),
+                        onClick = { showConnectionDetails = true },
                     )
                     .padding(end = 12.dp, top = 8.dp, bottom = 8.dp),
             )

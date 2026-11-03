@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$dg</string>
     <string name="result_age_days_short">%1$dn</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">Đã kết nối · cần kiểm tra</string>
+    <string name="connection_compact_delay">Đã kết nối · %1$s</string>
+    <string name="connection_compact_country">Đã kết nối · %1$s · %2$s</string>
+    <string name="connection_open_details">Mở chi tiết kết nối</string>
+    <string name="subscription_no_expiry">Không hết hạn</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">Chi tiết đăng ký; đã dùng %1$s; hết hạn %2$s</string>
 </resources>

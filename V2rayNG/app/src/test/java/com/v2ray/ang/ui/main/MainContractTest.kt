@@ -57,4 +57,14 @@ class MainContractTest {
         assertEquals(MainStatus.Disconnected, connectionStatusAfterTestReset(result, isRunning = false, currentPending = false))
     }
 
+    @Test
+    fun compactStatusOnlyUsesExplicitConnectionResults() {
+        assertEquals(ConnectionSummaryKind.NEEDS_TEST, connectionSummaryKind(MainStatus.Connected))
+        assertEquals(ConnectionSummaryKind.OTHER, connectionSummaryKind(MainStatus.Disconnected))
+        assertEquals(ConnectionSummaryKind.OTHER, connectionSummaryKind(MainStatus.Testing))
+        assertEquals(ConnectionSummaryKind.OTHER, connectionSummaryKind(MainStatus.ConnectionTest(com.v2ray.ang.dto.ConnectionTestResult(-1))))
+        assertEquals(ConnectionSummaryKind.SUCCESS, connectionSummaryKind(MainStatus.ConnectionTest(com.v2ray.ang.dto.ConnectionTestResult(25))))
+        assertEquals(ConnectionSummaryKind.SUCCESS_WITH_COUNTRY, connectionSummaryKind(MainStatus.ConnectionTest(com.v2ray.ang.dto.ConnectionTestResult(25, country = "US"))))
+    }
+
 }

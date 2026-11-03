@@ -109,4 +109,11 @@
     <string name="result_age_hours_short">%1$dh</string>
     <string name="result_age_days_short">%1$dd</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">Connected · test needed</string>
+    <string name="connection_compact_delay">Connected · %1$s</string>
+    <string name="connection_compact_country">Connected · %1$s · %2$s</string>
+    <string name="connection_open_details">Open connection details</string>
+    <string name="subscription_no_expiry">No expiry</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">Subscription details; usage %1$s; expires %2$s</string>
 </resources>

@@ -14,6 +14,19 @@ sealed interface MainStatus {
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
 
+internal enum class ConnectionSummaryKind { NEEDS_TEST, SUCCESS, SUCCESS_WITH_COUNTRY, OTHER }
+
+/** Never reuse the selected profile's stored ping as a measurement of the active connection. */
+internal fun connectionSummaryKind(status: MainStatus): ConnectionSummaryKind = when (status) {
+    MainStatus.Connected -> ConnectionSummaryKind.NEEDS_TEST
+    is MainStatus.ConnectionTest -> when {
+        status.result.delayMillis < 0L -> ConnectionSummaryKind.OTHER
+        status.result.country.isNullOrBlank() -> ConnectionSummaryKind.SUCCESS
+        else -> ConnectionSummaryKind.SUCCESS_WITH_COUNTRY
+    }
+    else -> ConnectionSummaryKind.OTHER
+}
+
 /** Keep the active-connection result separate from bulk-test progress. */
 internal fun connectionStatusAfterTestReset(
     status: MainStatus,

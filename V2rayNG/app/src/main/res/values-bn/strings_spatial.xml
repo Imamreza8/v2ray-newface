@@ -108,4 +108,11 @@
     <string name="result_age_hours_short">%1$dঘ</string>
     <string name="result_age_days_short">%1$dদি</string>
     <string name="result_age_accessible">%1$s · %2$s</string>
+    <string name="connection_compact_needs_test">সংযুক্ত · পরীক্ষা প্রয়োজন</string>
+    <string name="connection_compact_delay">সংযুক্ত · %1$s</string>
+    <string name="connection_compact_country">সংযুক্ত · %1$s · %2$s</string>
+    <string name="connection_open_details">সংযোগের বিস্তারিত খুলুন</string>
+    <string name="subscription_no_expiry">মেয়াদ নেই</string>
+    <string name="subscription_summary_line">%1$s · %2$s</string>
+    <string name="subscription_summary_accessible">সাবস্ক্রিপশনের বিস্তারিত; ব্যবহার %1$s; মেয়াদ %2$s</string>
 </resources>

@@ -37,6 +37,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.GroupMapItem
+import com.v2ray.ang.extension.toTrafficString
+import com.v2ray.ang.util.Utils
 
 @Composable
 internal fun GroupSelector(
@@ -54,6 +56,8 @@ internal fun GroupSelector(
     var showDetails by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(selectedGroupId) { showDetails = false }
     val selectedLabel = selected.remarks
+    val usage = selected.usageInfo
+    val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }
     val chooserDescription = stringResource(R.string.spatial_choose_group_current, selectedLabel)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -71,8 +75,24 @@ internal fun GroupSelector(
             Icon(painterResource(R.drawable.ic_expand_more_24dp), contentDescription = null)
         }
         if (selected.id.isNotEmpty()) {
-            TextButton(onClick = { showDetails = true }) {
-                Text(stringResource(R.string.spatial_subscription_details))
+            if (summary == null) {
+                TextButton(onClick = { showDetails = true }) {
+                    Text(stringResource(R.string.spatial_subscription_details))
+                }
+            } else {
+                val total = if (summary.totalBytes > 0L) summary.totalBytes.toTrafficString()
+                    else stringResource(R.string.sub_info_unlimited)
+                val traffic = stringResource(R.string.sub_info_traffic, summary.usedBytes.toTrafficString(), total)
+                val expiry = summary.expireMillis?.let { Utils.formatTimestamp(it, EXPIRY_DATE_PATTERN) }
+                    ?: stringResource(R.string.subscription_no_expiry)
+                val line = stringResource(R.string.subscription_summary_line, traffic, expiry)
+                val accessible = stringResource(R.string.subscription_summary_accessible, traffic, expiry)
+                TextButton(
+                    onClick = { showDetails = true },
+                    modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = accessible },
+                ) {
+                    Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }
@@ -129,7 +149,6 @@ internal fun GroupSelector(
             },
         )
     }
-    val usage = selected.usageInfo
     if (showDetails && selected.id.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { showDetails = false },
