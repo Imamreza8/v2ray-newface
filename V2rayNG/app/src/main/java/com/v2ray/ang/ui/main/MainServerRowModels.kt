@@ -23,6 +23,13 @@ internal data class ServerGroupUiState(
     val rows: List<ServerRowUiModel> = emptyList(),
     /** Null while this group has not been loaded. Counts are before search/status filtering. */
     val totalCount: Int? = null,
+    /** Keyword-matched source rows, including those hidden by the status filter. */
+    val keywordServers: List<ServersCache> = emptyList(),
+    val keywordRows: List<ServerRowUiModel> = emptyList(),
+    val keyword: String = "",
+    val appliedFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val topMaxMillis: Long = 0L,
+    val counts: FilterCounts = FilterCounts(),
 )
 
 internal fun buildServerRowUiModel(

@@ -73,7 +73,6 @@
     <string name="spatial_choose_group">Chọn nhóm</string>
     <string name="spatial_subscription_details">Chi tiết</string>
     <string name="spatial_group_count">%1$d cấu hình</string>
-    <string name="spatial_duplicate_group_name">%1$s (%2$d)</string>
     <string name="spatial_no_subscription_details">Đăng ký này không cung cấp thông tin sử dụng.</string>
     <string name="spatial_manual_create">Tạo thủ công</string>
     <string name="spatial_tools_test">Kiểm tra và sắp xếp</string>

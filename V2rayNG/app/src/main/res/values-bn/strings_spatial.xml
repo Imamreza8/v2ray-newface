@@ -73,7 +73,6 @@
     <string name="spatial_choose_group">গ্রুপ নির্বাচন করুন</string>
     <string name="spatial_subscription_details">বিস্তারিত</string>
     <string name="spatial_group_count">%1$d কনফিগ</string>
-    <string name="spatial_duplicate_group_name">%1$s (%2$d)</string>
     <string name="spatial_no_subscription_details">এই সাবস্ক্রিপশন ব্যবহারের তথ্য দেয়নি।</string>
     <string name="spatial_manual_create">ম্যানুয়ালি তৈরি করুন</string>
     <string name="spatial_tools_test">পরীক্ষা ও সাজানো</string>

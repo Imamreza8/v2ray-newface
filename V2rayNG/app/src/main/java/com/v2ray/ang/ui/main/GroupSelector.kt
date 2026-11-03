@@ -38,14 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.GroupMapItem
 
-/** Ordinals are display-only; all selection and updates still use the original group ID. */
-internal fun duplicateGroupOrdinal(groups: List<GroupMapItem>, id: String): Int? {
-    val group = groups.firstOrNull { it.id == id } ?: return null
-    val sameName = groups.filter { it.remarks == group.remarks }
-    if (sameName.size < 2) return null
-    return sameName.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1)
-}
-
 @Composable
 internal fun GroupSelector(
     groups: List<GroupMapItem>,
@@ -61,7 +53,7 @@ internal fun GroupSelector(
     var showGroups by rememberSaveable { mutableStateOf(false) }
     var showDetails by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(selectedGroupId) { showDetails = false }
-    val selectedLabel = groupLabel(groups, selected)
+    val selectedLabel = selected.remarks
     val chooserDescription = stringResource(R.string.spatial_choose_group_current, selectedLabel)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -120,10 +112,8 @@ internal fun GroupSelector(
                     }
                     items(visibleGroups, key = { "group:${it.id}" }) { group ->
                         GroupChoice(
-                            group = group,
-                            label = groupLabel(groups, group),
+                            label = group.remarks,
                             selected = group.id == selectedGroupId,
-                            mainViewModel = mainViewModel,
                             onSelect = { showGroups = false; onSelectGroup(group.id) },
                         )
                     }
@@ -143,7 +133,7 @@ internal fun GroupSelector(
     if (showDetails && selected.id.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { showDetails = false },
-            title = { Text(groupLabel(groups, selected)) },
+            title = { Text(selected.remarks) },
             text = {
                 if (usage != null) {
                     SubscriptionInfoCard(
@@ -169,22 +159,11 @@ internal fun GroupSelector(
 }
 
 @Composable
-private fun groupLabel(groups: List<GroupMapItem>, group: GroupMapItem): String {
-    val ordinal = remember(groups, group.id, group.remarks) { duplicateGroupOrdinal(groups, group.id) }
-    return if (ordinal == null) group.remarks
-    else stringResource(R.string.spatial_duplicate_group_name, group.remarks, ordinal)
-}
-
-@Composable
 private fun GroupChoice(
-    group: GroupMapItem,
     label: String,
     selected: Boolean,
-    mainViewModel: MainViewModel,
     onSelect: () -> Unit,
 ) {
-    val groupFlow = remember(group.id, mainViewModel) { mainViewModel.serverGroupState(group.id) }
-    val state by groupFlow.collectAsStateWithLifecycle()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -194,8 +173,5 @@ private fun GroupChoice(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, modifier = Modifier.weight(1f), color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-        state.totalCount?.let { count ->
-            Text(stringResource(R.string.spatial_group_count, count), style = MaterialTheme.typography.bodySmall)
-        }
     }
 }

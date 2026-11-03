@@ -32,7 +32,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,26 +51,16 @@ import java.util.regex.PatternSyntaxException
 private fun applyTestDelayResults(
     servers: List<ServersCache>,
     updates: Map<String, Long>,
+    nowMillis: Long,
 ): List<ServersCache> = servers.map { server ->
     val delayMillis = updates[server.guid]
     if (delayMillis == null) {
         server
     } else {
-        server.copy(testDelayMillis = delayMillis, testTime = System.currentTimeMillis())
+        server.copy(testDelayMillis = delayMillis, testTime = nowMillis)
     }
 }
 
-private fun applyTestDelayResultsToRows(
-    rows: List<ServerRowUiModel>,
-    updates: Map<String, Long>,
-): List<ServerRowUiModel> = rows.map { row ->
-    val delayMillis = updates[row.guid]
-    if (delayMillis == null) {
-        row
-    } else {
-        row.copy(testDelayMillis = delayMillis, testTime = System.currentTimeMillis())
-    }
-}
 
 class MainViewModel(
     application: Application,
@@ -136,6 +125,8 @@ class MainViewModel(
 
     // ---------- Groups & cache ----------
     private val cacheMutex = Mutex()
+    // Serializes filtered snapshots and live batches across background dispatchers.
+    private val presentationMutex = Mutex()
     private val groupDataCache = mutableMapOf<String, List<ServersCache>>()
     private val groupUiFlows = ConcurrentHashMap<String, MutableStateFlow<ServerGroupUiState>>()
     private val groupServerFlows = ConcurrentHashMap<String, StateFlow<List<ServersCache>>>()
@@ -225,7 +216,8 @@ class MainViewModel(
                 val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
                 val scheduledFlush = testResultFlushJob
                 testResultFlushJob = viewModelScope.launch {
-                    scheduledFlush?.cancelAndJoin()
+                    // Let any already-drained batch finish before processing the final results.
+                    scheduledFlush?.join()
                     if (testRequests.bulk?.id != request.id) return@launch
                     flushPendingTestResults(request)
                     onTestsFinished(request.id)
@@ -262,27 +254,35 @@ class MainViewModel(
     }
 
     private suspend fun flushPendingTestResults(request: MainTestRequests.Bulk) {
-        if (pendingTestResults.isEmpty()) return
-        if (testRequests.bulk?.id != request.id) return
-
-        val updates = cacheMutex.withLock {
-            val drained = pendingTestResults.toMap()
-            pendingTestResults.clear()
-            groupDataCache[request.groupId]?.let { cached ->
-                groupDataCache[request.groupId] = applyTestDelayResults(cached, drained)
-            }
-            drained
-        }
+        if (pendingTestResults.isEmpty() || testRequests.bulk?.id != request.id) return
+        val updates = pendingTestResults.toMap()
+        pendingTestResults.clear()
         publishRunStats()
-        if (updates.isEmpty()) return
-        if (testRequests.bulk?.id != request.id) return
-        mutableServerGroupState(request.groupId).update { current ->
-            current.copy(
-                servers = applyTestDelayResults(current.servers, updates),
-                rows = applyTestDelayResultsToRows(current.rows, updates),
-            )
+        val now = System.currentTimeMillis()
+        withContext(defaultDispatcher) {
+            presentationMutex.withLock {
+                val updatedGroups = cacheMutex.withLock {
+                    groupDataCache.mapValues { (_, servers) -> applyTestDelayResults(servers, updates, now) }
+                        .also { groupDataCache.putAll(it) }
+                }
+                for ((groupId, servers) in updatedGroups) {
+                    currentCoroutineContext().ensureActive()
+                    val stateFlow = mutableServerGroupState(groupId)
+                    val current = stateFlow.value
+                    if (current.totalCount == null) continue
+                    if (current.keyword != keywordFilter || current.appliedFilter != statusFilter ||
+                        current.topMaxMillis != TopConfigManager.getMaxDelayMillis()
+                    ) {
+                        renderGroupUi(groupId, servers)
+                    } else {
+                        val updated = applyLiveServerResults(current, updates, now)
+                        stateFlow.value = updated
+                        publishFilterCounts(groupId, updated.counts)
+                    }
+                }
+            }
         }
-        refreshFilterCountsFor(request.groupId)
+        if (testRequests.bulk?.id != request.id) return
         if (uiState.value.selectedGuid?.let { it in updates } == true) refreshSelectedInfo()
     }
 
@@ -486,8 +486,8 @@ class MainViewModel(
         }
     }
 
-    private fun applyKeywordFilter(servers: List<ServersCache>): List<ServersCache> {
-        val keyword = keywordFilter.trim()
+    private fun applyKeywordFilter(servers: List<ServersCache>, query: String = keywordFilter): List<ServersCache> {
+        val keyword = query.trim()
         if (keyword.isEmpty()) return servers
         val regex = try {
             Regex(keyword, RegexOption.IGNORE_CASE)
@@ -503,52 +503,59 @@ class MainViewModel(
         }
     }
 
-    private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
-        val keywordFiltered = applyKeywordFilter(servers)
-        val filteredServers = applyStatusFilter(keywordFiltered)
-        mutableServerGroupState(groupId).value = ServerGroupUiState(
-            servers = filteredServers,
-            rows = buildServerRows(groupId, filteredServers),
-            totalCount = servers.size,
-        )
-        publishFilterCounts(groupId, keywordFiltered)
-    }
-
-    private fun applyStatusFilter(servers: List<ServersCache>): List<ServersCache> {
-        val filter = statusFilter
-        if (filter == ServerStatusFilter.ALL) return servers
-        val topMax = TopConfigManager.getMaxDelayMillis()
-        return servers.filter { matchesServerStatus(it.testDelayMillis, filter, topMax) }
-    }
-
-    private fun publishFilterCounts(groupId: String, servers: List<ServersCache>) {
-        val topMax = TopConfigManager.getMaxDelayMillis()
-        var top = 0
-        var alive = 0
-        var untested = 0
-        var failed = 0
-        for (server in servers) {
-            val delay = server.testDelayMillis
-            when {
-                delay > 0L -> {
-                    alive++
-                    if (delay <= topMax) top++
-                }
-                delay == 0L -> untested++
-                else -> failed++
+    private suspend fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
+        withContext(defaultDispatcher) {
+            presentationMutex.withLock {
+                val latest = cacheMutex.withLock { groupDataCache[groupId] ?: servers }
+                renderGroupUi(groupId, latest)
             }
         }
-        val counts = FilterCounts(servers.size, top, alive, untested, failed)
+    }
+
+    /** Caller holds presentationMutex so a filter rebuild cannot overwrite a newer test batch. */
+    private suspend fun renderGroupUi(groupId: String, servers: List<ServersCache>) {
+        val query = keywordFilter
+        val filter = statusFilter
+        val topMax = TopConfigManager.getMaxDelayMillis()
+        val keywordServers = applyKeywordFilter(servers, query)
+        val keywordRows = buildServerRows(groupId, keywordServers)
+        val visibleServers = ArrayList<ServersCache>()
+        val visibleRows = ArrayList<ServerRowUiModel>()
+        keywordServers.forEachIndexed { index, server ->
+            if (matchesServerStatus(server.testDelayMillis, filter, topMax)) {
+                visibleServers.add(server)
+                visibleRows.add(keywordRows[index])
+            }
+        }
+        val counts = countServerStatuses(keywordServers, topMax)
+        mutableServerGroupState(groupId).value = ServerGroupUiState(
+            servers = visibleServers,
+            rows = visibleRows,
+            totalCount = servers.size,
+            keywordServers = keywordServers,
+            keywordRows = keywordRows,
+            keyword = query,
+            appliedFilter = filter,
+            topMaxMillis = topMax,
+            counts = counts,
+        )
+        publishFilterCounts(groupId, counts)
+    }
+
+    private fun publishFilterCounts(groupId: String, counts: FilterCounts) {
         _uiState.update {
             if (it.selectedGroupId != groupId || it.filterCounts == counts) it else it.copy(filterCounts = counts)
         }
     }
 
-    /** Recomputes the chip counts for [groupId] from the cache (used when the selected group changes). */
     private fun refreshFilterCountsFor(groupId: String) {
         viewModelScope.launch(defaultDispatcher) {
-            val servers = cacheMutex.withLock { groupDataCache[groupId] } ?: return@launch
-            publishFilterCounts(groupId, applyKeywordFilter(servers))
+            presentationMutex.withLock {
+                val state = mutableServerGroupState(groupId).value
+                if (state.totalCount != null && state.keyword == keywordFilter) {
+                    publishFilterCounts(groupId, state.counts)
+                }
+            }
         }
     }
 
@@ -566,17 +573,11 @@ class MainViewModel(
         }
     }
 
-    private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
-        val subscriptionRemarks = if (groupId.isEmpty()) {
-            servers.asSequence()
-                .map { it.profile.subscriptionId }
-                .filter { it.isNotEmpty() }
-                .distinct()
-                .associateWith { subscriptionId ->
-                    dataSource.getSubscriptionItem(subscriptionId)?.remarks.orEmpty()
-                }
-        } else {
-            emptyMap()
+    private suspend fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
+        val subscriptionIds = if (groupId.isEmpty()) servers.asSequence()
+            .map { it.profile.subscriptionId }.filter { it.isNotEmpty() }.distinct().toList() else emptyList()
+        val subscriptionRemarks = withContext(ioDispatcher) {
+            subscriptionIds.associateWith { dataSource.getSubscriptionItem(it)?.remarks.orEmpty() }
         }
         return servers.map { server ->
             buildServerRowUiModel(
@@ -993,13 +994,14 @@ class MainViewModel(
     }
 
     fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
+        if (uiState.value.isTesting) return
         val groupState = mutableServerGroupState(groupId).value
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return
         val rows = groupState.rows.toMutableList()
         rows.moveItem(fromPosition, toPosition)
         val guids = servers.map { it.guid }
-        mutableServerGroupState(groupId).value = groupState.copy(servers = servers, rows = rows)
+        mutableServerGroupState(groupId).value = groupState.copy(servers = servers, rows = rows, keywordServers = servers, keywordRows = rows)
         // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
         serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
