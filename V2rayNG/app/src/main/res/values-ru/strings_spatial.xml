@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">Подписки</string>
     <string name="spatial_tools_other">Другое</string>
     <string name="spatial_tools_delete">Удаление</string>
+    <string name="spatial_choose_group_current">Выбрать группу, текущая: %1$s</string>
+    <string name="spatial_no_matching_groups">Нет подходящих групп</string>
 </resources>

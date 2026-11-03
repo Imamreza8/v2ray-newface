@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">Đăng ký</string>
     <string name="spatial_tools_other">Khác</string>
     <string name="spatial_tools_delete">Xóa</string>
+    <string name="spatial_choose_group_current">Chọn nhóm, hiện tại: %1$s</string>
+    <string name="spatial_no_matching_groups">Không có nhóm phù hợp</string>
 </resources>

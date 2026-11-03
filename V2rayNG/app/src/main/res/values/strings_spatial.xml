@@ -81,4 +81,6 @@
     <string name="spatial_tools_subscriptions">Subscriptions</string>
     <string name="spatial_tools_other">Other</string>
     <string name="spatial_tools_delete">Delete</string>
+    <string name="spatial_choose_group_current">Choose group, current: %1$s</string>
+    <string name="spatial_no_matching_groups">No matching groups</string>
 </resources>

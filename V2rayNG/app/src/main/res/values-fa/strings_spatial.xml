@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">اشتراک‌ها</string>
     <string name="spatial_tools_other">سایر</string>
     <string name="spatial_tools_delete">حذف</string>
+    <string name="spatial_choose_group_current">انتخاب گروه، گروه فعلی: %1$s</string>
+    <string name="spatial_no_matching_groups">گروهی پیدا نشد</string>
 </resources>

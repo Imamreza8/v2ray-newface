@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -60,12 +62,17 @@ internal fun GroupSelector(
     var showGroups by rememberSaveable { mutableStateOf(false) }
     var showDetails by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(selectedGroupId) { showDetails = false }
+    val selectedLabel = groupLabel(groups, selected)
+    val chooserDescription = stringResource(R.string.spatial_choose_group_current, selectedLabel)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = { showGroups = true }, modifier = Modifier.weight(1f)) {
-            Text(groupLabel(groups, selected), modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        TextButton(
+            onClick = { showGroups = true },
+            modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = chooserDescription },
+        ) {
+            Text(selectedLabel, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
             selectedState.totalCount?.let { count ->
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.spatial_group_count, count), maxLines = 1)
@@ -103,6 +110,12 @@ internal fun GroupSelector(
                         label = { Text(stringResource(R.string.menu_item_search)) },
                         singleLine = true,
                     )
+                    if (visibleGroups.isEmpty()) {
+                        Text(
+                            stringResource(R.string.spatial_no_matching_groups),
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
+                    }
                     visibleGroups.forEach { group ->
                         key(group.id) {
                             GroupChoice(

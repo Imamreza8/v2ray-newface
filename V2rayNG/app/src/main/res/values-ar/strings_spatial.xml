@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">الاشتراكات</string>
     <string name="spatial_tools_other">أخرى</string>
     <string name="spatial_tools_delete">الحذف</string>
+    <string name="spatial_choose_group_current">اختيار المجموعة، الحالية: %1$s</string>
+    <string name="spatial_no_matching_groups">لا توجد مجموعات مطابقة</string>
 </resources>

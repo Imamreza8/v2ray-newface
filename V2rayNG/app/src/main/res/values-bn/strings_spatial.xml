@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">সাবস্ক্রিপশন</string>
     <string name="spatial_tools_other">অন্যান্য</string>
     <string name="spatial_tools_delete">মুছুন</string>
+    <string name="spatial_choose_group_current">গ্রুপ নির্বাচন করুন, বর্তমান: %1$s</string>
+    <string name="spatial_no_matching_groups">মিলে এমন গ্রুপ নেই</string>
 </resources>

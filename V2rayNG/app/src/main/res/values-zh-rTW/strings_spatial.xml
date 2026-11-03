@@ -80,4 +80,6 @@
     <string name="spatial_tools_subscriptions">訂閱</string>
     <string name="spatial_tools_other">其他</string>
     <string name="spatial_tools_delete">刪除</string>
+    <string name="spatial_choose_group_current">選擇群組，目前：%1$s</string>
+    <string name="spatial_no_matching_groups">沒有相符的群組</string>
 </resources>
