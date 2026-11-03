@@ -41,6 +41,25 @@ internal fun formatShareLink(type: EConfigType, encode: () -> String): String {
     return if (body.isBlank()) "" else type.protocolScheme + body
 }
 
+/** Count complete links, and report a failed clipboard write rather than claiming success. */
+internal fun copyShareLinks(
+    guids: List<String>,
+    linkFor: (String) -> String,
+    copy: (String) -> Boolean,
+): Int {
+    val links = StringBuilder()
+    var count = 0
+    guids.forEach { guid ->
+        val link = linkFor(guid)
+        if (link.isNotBlank()) {
+            links.appendLine(link)
+            count++
+        }
+    }
+    if (count == 0) return 0
+    return if (copy(links.toString())) count else -1
+}
+
 object AngConfigManager {
 
     private data class ParsedProfile(
@@ -78,7 +97,7 @@ object AngConfigManager {
                 return -1
             }
 
-            Utils.setClipboard(context, conf)
+            if (!Utils.trySetClipboard(context, conf)) return -1
 
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share config to clipboard", e)
@@ -96,19 +115,9 @@ object AngConfigManager {
      */
     fun shareNonCustomConfigsToClipboard(context: Context, serverList: List<String>): Int {
         try {
-            val sb = StringBuilder()
-            for (guid in serverList) {
-                val url = shareConfig(guid)
-                if (TextUtils.isEmpty(url)) {
-                    continue
-                }
-                sb.append(url)
-                sb.appendLine()
+            return copyShareLinks(serverList, ::shareConfig) { content ->
+                Utils.trySetClipboard(context, content)
             }
-            if (sb.count() > 0) {
-                Utils.setClipboard(context, sb.toString())
-            }
-            return sb.lines().count() - 1
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share non-custom configs to clipboard", e)
             return -1

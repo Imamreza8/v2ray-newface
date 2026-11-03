@@ -26,4 +26,15 @@ class ShareLinkTest {
             assertEquals(type.protocolScheme + "body", formatShareLink(type) { "body" })
         }
     }
+    @Test
+    fun copyCountsActualLinksAndFailsClosedWhenClipboardFails() {
+        var copied = ""
+        val getLink: (String) -> String = { if (it == "skip") "" else "vless://$it" }
+        assertEquals(2, copyShareLinks(listOf("a", "skip", "b"), getLink) { copied = it; true })
+        assertEquals("vless://a\nvless://b\n", copied)
+        assertEquals(-1, copyShareLinks(listOf("a"), getLink) { false })
+        var called = false
+        assertEquals(0, copyShareLinks(listOf("skip"), getLink) { called = true; true })
+        assertFalse(called)
+    }
 }
