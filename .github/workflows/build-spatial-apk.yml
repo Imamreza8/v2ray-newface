@@ -119,6 +119,40 @@ jobs:
           exit 1
         fi
 
+    - name: Verify and upload Newface debug APK
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mapfile -t apks < <(find V2rayNG/app/build/outputs/apk/newface/debug -name '*arm64-v8a*.apk')
+        test "${#apks[@]}" -eq 1
+        "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "${apks[0]}"
+        APK_PATH="${apks[0]}" python3 - <<'PYCODE'
+        import os
+        from zipfile import ZipFile
+
+        with ZipFile(os.environ['APK_PATH']) as apk:
+            names = set(apk.namelist())
+            required = {f'lib/arm64-v8a/{name}' for name in (
+                'libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so'
+            )}
+            missing = required - names
+            unexpected = {name.split('/')[1] for name in names
+                          if name.startswith('lib/') and len(name.split('/')) > 2
+                          and name.split('/')[1] != 'arm64-v8a'}
+            if missing or unexpected:
+                raise SystemExit(f'Missing libraries: {missing}; unexpected ABIs: {unexpected}')
+        PYCODE
+
+    - name: Upload Newface debug APK for testing only
+      if: inputs.source_version != 'previous-v6'
+      uses: actions/upload-artifact@v7
+      with:
+        # Each runner creates a different debug key. This APK cannot be upgraded reliably.
+        name: newface-arm64-debug-testing-only
+        if-no-files-found: error
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/newface/debug/*arm64-v8a*.apk
+
     - name: Test Newface release signing with an ephemeral key
       if: inputs.source_version != 'previous-v6'
       shell: bash
