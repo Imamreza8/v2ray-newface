@@ -27,6 +27,7 @@ import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.CancellationException
 import okhttp3.Headers
 import java.net.URI
 
@@ -613,6 +614,8 @@ object AngConfigManager {
             if (result == SortedOrderOutcome.STALE) {
                 LogUtil.w(AppConfig.TAG, "Skipped stale automatic server sort for group $groupId")
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (error: Exception) {
             // This helper is also called from service worker callbacks: do not strand the worker
             // on storage failure, and never log profile contents.
