@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">Выберите группу, очистите поиск и фильтры и дождитесь завершения теста и загрузки.</string>
     <string name="controls_hide">Скрыть группы и фильтры</string>
     <string name="controls_show">Показать группы и фильтры</string>
+    <string name="export_scope_title">Экспорт в буфер обмена</string>
+    <string name="export_scope_note">Некоторые профили нельзя скопировать ссылками; после экспорта будет показано число скопированных.</string>
+    <string name="export_scope_group">Группа %1$s (%2$d профилей)</string>
+    <string name="export_scope_visible">Видимый фильтр (%1$d профилей)</string>
+    <string name="export_scope_selected">Выбранный профиль (%1$d)</string>
 </resources>

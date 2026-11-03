@@ -108,6 +108,22 @@ data class ScopedTestProposal(
     val guids: List<String>,
 )
 
+enum class ExportScope { GROUP, VISIBLE, SELECTED }
+
+data class ExportProposal(
+    val groupId: String,
+    val groupName: String,
+    val groupGuids: List<String>,
+    val visibleGuids: List<String>,
+    val selectedGuid: String?,
+)
+
+internal fun exportScopeGuids(proposal: ExportProposal, scope: ExportScope): List<String> = when (scope) {
+    ExportScope.GROUP -> proposal.groupGuids
+    ExportScope.VISIBLE -> proposal.visibleGuids
+    ExportScope.SELECTED -> listOfNotNull(proposal.selectedGuid)
+}
+
 /** Confirmed single-group order; no list indexes are used as identity. */
 data class SaveOrderProposal(
     val groupId: String,
@@ -174,6 +190,7 @@ data class MainUiState(
     val expandProposal: ExpandProposal? = null,
     val scopedTestProposal: ScopedTestProposal? = null,
     val saveOrderProposal: SaveOrderProposal? = null,
+    val exportProposal: ExportProposal? = null,
     val runStats: TestRunStats = TestRunStats(),
     /** Number of configs left from a run the user cancelled; 0 = nothing to resume. */
     val resumableCount: Int = 0,
@@ -209,6 +226,8 @@ sealed interface MainAction {
     data object UpdateSubscriptions : MainAction
     data class UpdateGroupSubscription(val groupId: String) : MainAction
     data object ExportAll : MainAction
+    data class ConfirmExport(val scope: ExportScope) : MainAction
+    data object DismissExport : MainAction
 
     data object ImportQRcode : MainAction
     data object ImportClipboard : MainAction

@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">একটি গ্রুপ বেছে নিন, অনুসন্ধান ও ফিল্টার সরান এবং পরীক্ষা ও লোডিং শেষ হওয়া পর্যন্ত অপেক্ষা করুন।</string>
     <string name="controls_hide">গ্রুপ ও ফিল্টার লুকান</string>
     <string name="controls_show">গ্রুপ ও ফিল্টার দেখান</string>
+    <string name="export_scope_title">ক্লিপবোর্ডে রপ্তানি</string>
+    <string name="export_scope_note">কিছু কনফিগ লিংক হিসেবে কপি করা নাও যেতে পারে; কপি করা সংখ্যা পরে দেখানো হবে।</string>
+    <string name="export_scope_group">গ্রুপ %1$s (%2$d কনফিগ)</string>
+    <string name="export_scope_visible">দৃশ্যমান ফিল্টার (%1$d কনফিগ)</string>
+    <string name="export_scope_selected">নির্বাচিত কনফিগ (%1$d)</string>
 </resources>

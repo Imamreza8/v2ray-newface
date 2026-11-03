@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">Chọn nhóm, xóa tìm kiếm và bộ lọc, rồi đợi kiểm tra và tải hoàn tất.</string>
     <string name="controls_hide">Ẩn nhóm và bộ lọc</string>
     <string name="controls_show">Hiện nhóm và bộ lọc</string>
+    <string name="export_scope_title">Xuất vào bảng nhớ tạm</string>
+    <string name="export_scope_note">Một số cấu hình không thể sao chép dưới dạng liên kết; số đã sao chép sẽ được hiển thị.</string>
+    <string name="export_scope_group">Nhóm %1$s (%2$d cấu hình)</string>
+    <string name="export_scope_visible">Bộ lọc đang thấy (%1$d cấu hình)</string>
+    <string name="export_scope_selected">Cấu hình đã chọn (%1$d)</string>
 </resources>

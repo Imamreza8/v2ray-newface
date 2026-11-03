@@ -1,6 +1,17 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.res.stringResource
 import com.v2ray.ang.R
@@ -88,6 +99,44 @@ internal fun SaveOrderDialog(proposal: SaveOrderProposal, onConfirm: () -> Unit,
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 androidx.compose.material3.Text(stringResource(R.string.action_cancel))
             }
+        },
+    )
+}
+
+@Composable
+internal fun ExportScopeDialog(proposal: ExportProposal, onConfirm: (ExportScope) -> Unit, onDismiss: () -> Unit) {
+    var scope by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(ExportScope.VISIBLE) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { androidx.compose.material3.Text(stringResource(R.string.export_scope_title)) },
+        text = {
+            androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState())) {
+                androidx.compose.material3.Text(stringResource(R.string.export_scope_note))
+                ExportScope.entries.forEach { item ->
+                    val label = when (item) {
+                        ExportScope.GROUP -> stringResource(R.string.export_scope_group, proposal.groupName, proposal.groupGuids.size)
+                        ExportScope.VISIBLE -> stringResource(R.string.export_scope_visible, proposal.visibleGuids.size)
+                        ExportScope.SELECTED -> stringResource(R.string.export_scope_selected, if (proposal.selectedGuid == null) 0 else 1)
+                    }
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            .selectable(selected = scope == item, role = Role.RadioButton, onClick = { scope = item }),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.RadioButton(selected = scope == item, onClick = null)
+                        androidx.compose.material3.Text(label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onConfirm(scope) },
+                enabled = exportScopeGuids(proposal, scope).isNotEmpty(),
+            ) { androidx.compose.material3.Text(stringResource(R.string.spatial_speed_start)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

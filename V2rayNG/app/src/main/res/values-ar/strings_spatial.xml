@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">اختر مجموعة وأزل البحث والمرشحات وانتظر انتهاء الاختبار والتحميل.</string>
     <string name="controls_hide">إخفاء المجموعات والمرشحات</string>
     <string name="controls_show">إظهار المجموعات والمرشحات</string>
+    <string name="export_scope_title">التصدير إلى الحافظة</string>
+    <string name="export_scope_note">قد يتعذر نسخ بعض إعدادات النطاق كروابط؛ يظهر عدد المنسوخ بعد التصدير.</string>
+    <string name="export_scope_group">المجموعة %1$s (%2$d إعدادات)</string>
+    <string name="export_scope_visible">المرشح الظاهر (%1$d إعدادات)</string>
+    <string name="export_scope_selected">الإعداد المحدد (%1$d)</string>
 </resources>

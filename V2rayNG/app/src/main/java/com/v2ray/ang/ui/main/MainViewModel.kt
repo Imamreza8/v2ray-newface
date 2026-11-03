@@ -110,6 +110,7 @@ class MainViewModel(
     private var resumeGroupId = ""
     private var scopedTestPreparationJob: Job? = null
     private var saveOrderPreparationJob: Job? = null
+    private var exportPreparationJob: Job? = null
     private val runDone = HashSet<String>()
     private var runOk = 0
     private var runFailed = 0
@@ -368,7 +369,9 @@ class MainViewModel(
             MainAction.DismissSaveOrder -> _uiState.update { it.copy(saveOrderProposal = null) }
             MainAction.UpdateSubscriptions -> importConfigViaSub(uiState.value.selectedGroupId)
             is MainAction.UpdateGroupSubscription -> importConfigViaSub(action.groupId)
-            MainAction.ExportAll -> exportAllAsync()
+            MainAction.ExportAll -> prepareExport()
+            is MainAction.ConfirmExport -> confirmExport(action.scope)
+            MainAction.DismissExport -> _uiState.update { it.copy(exportProposal = null) }
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.SelectServer -> updateSelectedGuid(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
@@ -779,28 +782,67 @@ class MainViewModel(
         }
     }
 
-    private fun exportAllAsync() {
-        launchLoading {
-            withContext(ioDispatcher) {
-                try {
-                    val groupId = uiState.value.selectedGroupId
-                    val list = if (groupId.isEmpty() && !hasActiveServerFilter(keywordFilter, statusFilter)) {
-                        dataSource.getServerGuidList("")
-                    } else {
-                        currentServers().map { it.guid }
-                    }
-                    val ret = dataSource.shareNonCustomConfigsToClipboard(list)
-                    if (ret > 0) {
-                        toast(dataSource.getString(R.string.title_export_config_count, ret))
-                    } else {
-                        toastError(R.string.toast_failure)
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (e: Exception) {
-                    LogUtil.e(AppConfig.TAG, "Export failed", e)
-                    toastError(R.string.toast_failure)
+    private fun prepareExport() {
+        exportPreparationJob?.cancel()
+        val ui = _uiState.value
+        val group = ui.groups.firstOrNull { it.id == ui.selectedGroupId } ?: return
+        val state = mutableServerGroupState(group.id).value
+        val keyword = keywordFilter
+        if (!scopedListReady(state, keyword, ui.statusFilter) || state.appliedSort != ui.displaySort) {
+            toast(R.string.scoped_test_updating)
+            return
+        }
+        exportPreparationJob = viewModelScope.launch {
+            val proposal = withContext(defaultDispatcher) {
+                val source = cacheMutex.withLock { groupDataCache[group.id] } ?: return@withContext null
+                ExportProposal(
+                    groupId = group.id,
+                    groupName = group.remarks,
+                    groupGuids = source.map { it.guid }.filter { it.isNotBlank() }.distinct(),
+                    visibleGuids = state.servers.map { it.guid }.filter { it.isNotBlank() }.distinct(),
+                    selectedGuid = ui.selectedGuid?.takeIf { it.isNotBlank() },
+                )
+            } ?: run { toast(R.string.scoped_test_updating); return@launch }
+            val current = _uiState.value
+            if (current.selectedGroupId != group.id || current.statusFilter != ui.statusFilter ||
+                current.displaySort != ui.displaySort || current.selectedGuid != ui.selectedGuid || keywordFilter != keyword ||
+                mutableServerGroupState(group.id).value !== state
+            ) {
+                toast(R.string.scoped_test_updating)
+                return@launch
+            }
+            _uiState.update { it.copy(exportProposal = proposal) }
+        }
+    }
+
+    private fun confirmExport(scope: ExportScope) {
+        val proposal = _uiState.value.exportProposal ?: return
+        _uiState.update { it.copy(exportProposal = null) }
+        val guids = exportScopeGuids(proposal, scope)
+        if (guids.isEmpty()) return
+        if (scope != ExportScope.SELECTED && _uiState.value.groups.none { it.id == proposal.groupId }) {
+            toast(R.string.scoped_test_changed)
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val count = withContext(ioDispatcher) {
+                    val existing = if (scope == ExportScope.SELECTED) {
+                        guids.filter { dataSource.decodeServerConfig(it) != null }.toSet()
+                    } else dataSource.getServerGuidList(proposal.groupId).toSet()
+                    if (!scopedSnapshotStillExists(guids, existing, true)) return@withContext null
+                    dataSource.shareNonCustomConfigsToClipboard(guids)
                 }
+                when {
+                    count == null -> toast(R.string.scoped_test_changed)
+                    count > 0 -> toast(dataSource.getString(R.string.title_export_config_count, count))
+                    else -> toastError(R.string.toast_failure)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Scoped export failed", e)
+                toastError(R.string.toast_failure)
             }
         }
     }

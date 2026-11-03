@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">請選擇群組，清除搜尋和篩選，並等待測試及載入完成。</string>
     <string name="controls_hide">隱藏群組和篩選</string>
     <string name="controls_show">顯示群組和篩選</string>
+    <string name="export_scope_title">匯出到剪貼簿</string>
+    <string name="export_scope_note">部分設定無法複製為連結；匯出後會顯示實際複製數量。</string>
+    <string name="export_scope_group">群組 %1$s（%2$d 個設定）</string>
+    <string name="export_scope_visible">目前篩選（%1$d 個設定）</string>
+    <string name="export_scope_selected">選取的設定（%1$d）</string>
 </resources>

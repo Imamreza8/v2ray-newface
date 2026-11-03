@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">Qrup seçin, axtarışı və filtrləri təmizləyin, yoxlama və yüklənmənin bitməsini gözləyin.</string>
     <string name="controls_hide">Qrupları və filtrləri gizlət</string>
     <string name="controls_show">Qrupları və filtrləri göstər</string>
+    <string name="export_scope_title">Mübadilə buferinə ixrac</string>
+    <string name="export_scope_note">Bəzi konfiqurasiyalar keçid kimi kopyalana bilməz; kopyalanan say göstəriləcək.</string>
+    <string name="export_scope_group">Qrup %1$s (%2$d konfiqurasiya)</string>
+    <string name="export_scope_visible">Görünən filtr (%1$d konfiqurasiya)</string>
+    <string name="export_scope_selected">Seçilmiş konfiqurasiya (%1$d)</string>
 </resources>

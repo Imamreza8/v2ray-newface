@@ -124,4 +124,9 @@
     <string name="save_order_unavailable">Select a group, clear search and filters, and wait until testing and loading finish.</string>
     <string name="controls_hide">Hide groups and filters</string>
     <string name="controls_show">Show groups and filters</string>
+    <string name="export_scope_title">Export to clipboard</string>
+    <string name="export_scope_note">The selected scope may contain configs that cannot be copied as links; the result shows the number copied.</string>
+    <string name="export_scope_group">Group %1$s (%2$d configs)</string>
+    <string name="export_scope_visible">Visible filter (%1$d configs)</string>
+    <string name="export_scope_selected">Selected config (%1$d)</string>
 </resources>

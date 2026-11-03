@@ -146,6 +146,14 @@ fun MainScreen(
         onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) }
     )
 
+    uiState.exportProposal?.let { proposal ->
+        ExportScopeDialog(
+            proposal = proposal,
+            onConfirm = { onAction(MainAction.ConfirmExport(it)) },
+            onDismiss = { onAction(MainAction.DismissExport) },
+        )
+    }
+
     uiState.saveOrderProposal?.let { proposal ->
         SaveOrderDialog(
             proposal = proposal,

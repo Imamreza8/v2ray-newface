@@ -123,4 +123,9 @@
     <string name="save_order_unavailable">请选择分组，清除搜索和筛选，并等待测试及加载完成。</string>
     <string name="controls_hide">隐藏分组和筛选</string>
     <string name="controls_show">显示分组和筛选</string>
+    <string name="export_scope_title">导出到剪贴板</string>
+    <string name="export_scope_note">部分配置无法复制为链接；导出后会显示实际复制数量。</string>
+    <string name="export_scope_group">分组 %1$s（%2$d 个配置）</string>
+    <string name="export_scope_visible">当前筛选（%1$d 个配置）</string>
+    <string name="export_scope_selected">选中的配置（%1$d）</string>
 </resources>
