@@ -40,4 +40,15 @@ class MainImportMenuTest {
         )
         assertEquals(expected, serverMenuActions(isComplexProfile = true, includeManagementActions = true))
     }
+    @Test
+    fun importMenuKeepsEveryExistingActionExactlyOnce() {
+        val quick = quickImportActions()
+        val manual = manualImportActions()
+        assertEquals(3, quick.size)
+        assertEquals(ImportMenuAction.entries.toSet(), (quick + manual).toSet())
+        assertEquals(ImportMenuAction.entries.size, (quick + manual).size)
+        assertEquals(true, manual.all { it.action is MainAction.ImportManually })
+        assertEquals(true, quick.none { it.action is MainAction.ImportManually })
+    }
+
 }

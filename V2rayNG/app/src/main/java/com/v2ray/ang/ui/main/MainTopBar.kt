@@ -41,12 +41,17 @@ fun MainTopBar(
     onMoreMenuAction: (MainMoreMenuAction) -> Unit
 ) {
     var showImportMenu by remember { mutableStateOf(false) }
+    var showManualImport by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     val importMenuScrollState = rememberScrollState()
     val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
+
+    if (showManualImport) {
+        ManualImportDialog(onAction = onAction, onDismiss = { showManualImport = false })
+    }
 
     AppTopBar(
         containerColor = Color.Transparent,
@@ -92,7 +97,8 @@ fun MainTopBar(
                         onAction = { action ->
                             showImportMenu = false
                             onAction(action)
-                        }
+                        },
+                        onManual = { showImportMenu = false; showManualImport = true },
                     )
                 }
             }

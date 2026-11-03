@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import com.v2ray.ang.ui.compose.SpatialBackground
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -241,30 +240,29 @@ fun MainScreen(
             },
             floatingActionButton = {},
         ) { innerPadding ->
-            val layoutDirection = LocalLayoutDirection.current
-
             if (groups.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    ServerListChrome(uiState = uiState, onAction = onAction)
-                    if (groups.size > 1) {
-                        GroupTabBar(
-                            groups = groups,
-                            selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
-                            mainViewModel = mainViewModel,
-                            onTabClick = { targetIndex ->
-                                scope.launch {
-                                    pagerState.navigateToPageOptimized(
-                                        targetPage = targetIndex,
-                                        animateAdjacentPage = true
-                                    )
+                    GroupSelector(
+                        groups = groups,
+                        selectedGroupId = uiState.selectedGroupId,
+                        mainViewModel = mainViewModel,
+                        onSelectGroup = { groupId ->
+                            scope.launch {
+                                val target = latestGroups.indexOfFirst { it.id == groupId }
+                                if (target >= 0) {
+                                    onAction(MainAction.SelectGroup(groupId))
+                                    pagerState.scrollToPage(target)
                                 }
                             }
-                        )
-                    }
+                        },
+                        onManageGroups = { onNavigate(MainDestination.Subscriptions) },
+                        onAction = onAction,
+                    )
+                    ServerListChrome(uiState = uiState, onAction = onAction)
 
                     HorizontalPager(
                         state = pagerState,
@@ -294,14 +292,11 @@ fun MainScreen(
                                 shareTarget = Triple(guid, profile, true)
                             },
                             onRemoveServer = removeServer,
-                            usageInfo = group.usageInfo,
-                            groupTitle = group.remarks,
-                            onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,
                                 end = 0.dp,
-                                bottom = 80.dp
+                                bottom = 8.dp
                             )
                         )
                     }

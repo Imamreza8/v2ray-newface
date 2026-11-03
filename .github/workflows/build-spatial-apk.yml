@@ -88,6 +88,12 @@ jobs:
           exit "$result"
         fi
 
+    - name: Test and assemble Play Store debug
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:testPlaystoreDebugUnitTest :app:compilePlaystoreDebugKotlin :app:assemblePlaystoreDebug -PABI_FILTERS=arm64-v8a
+
     - name: Verify arm64 native libraries
       shell: bash
       run: |

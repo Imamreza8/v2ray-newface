@@ -21,6 +21,8 @@ internal data class ServerRowUiModel(
 internal data class ServerGroupUiState(
     val servers: List<ServersCache> = emptyList(),
     val rows: List<ServerRowUiModel> = emptyList(),
+    /** Null while this group has not been loaded. Counts are before search/status filtering. */
+    val totalCount: Int? = null,
 )
 
 internal fun buildServerRowUiModel(

@@ -1,7 +1,18 @@
 package com.v2ray.ang.ui.main
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -10,7 +21,7 @@ import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.ui.compose.AppDropdownMenuItems
 import com.v2ray.ang.ui.compose.SelectListDialog
 
-private enum class ImportMenuAction(@StringRes val labelRes: Int, val action: MainAction) {
+internal enum class ImportMenuAction(@StringRes val labelRes: Int, val action: MainAction) {
     QRCode(R.string.menu_item_import_config_qrcode, MainAction.ImportQRcode),
     Clipboard(R.string.menu_item_import_config_clipboard, MainAction.ImportClipboard),
     LocalFile(R.string.menu_item_import_config_local, MainAction.ImportConfigLocal),
@@ -58,12 +69,46 @@ internal fun serverMenuActions(
     (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
 }
 
+internal fun quickImportActions(): List<ImportMenuAction> =
+    ImportMenuAction.entries.filter { it.action !is MainAction.ImportManually }
+
+internal fun manualImportActions(): List<ImportMenuAction> =
+    ImportMenuAction.entries.filter { it.action is MainAction.ImportManually }
+
 @Composable
-fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
-    items = ImportMenuAction.entries,
-    labelRes = { it.labelRes },
-    onSelected = { onAction(it.action) }
-)
+fun ImportMenuContent(onAction: (MainAction) -> Unit, onManual: () -> Unit) {
+    AppDropdownMenuItems(
+        items = quickImportActions(),
+        labelRes = { it.labelRes },
+        onSelected = { onAction(it.action) },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.spatial_manual_create)) },
+        onClick = onManual,
+    )
+}
+
+@Composable
+fun ManualImportDialog(onAction: (MainAction) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.spatial_manual_create)) },
+        text = {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                manualImportActions().forEach { action ->
+                    key(action) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(action.labelRes)) },
+                            onClick = { onDismiss(); onAction(action.action) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
 
 @Composable
 fun MoreMenuContent(onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
