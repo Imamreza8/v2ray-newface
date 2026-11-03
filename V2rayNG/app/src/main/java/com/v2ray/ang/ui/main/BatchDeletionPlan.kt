@@ -4,6 +4,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.extension.isComplexType
+import java.util.Collections
 
 internal enum class BatchDeletionKind { VISIBLE, DUPLICATES, INVALID }
 
@@ -63,7 +64,7 @@ internal class BatchDeletionPlan private constructor(
                 if (target) targets += server.guid
                 Snapshot(server.guid, profile, server.testDelayMillis)
             }
-            return BatchDeletionPlan(groupId, kind, targets.toList(), selectedGuid, snapshots)
+            return BatchDeletionPlan(groupId, kind, Collections.unmodifiableList(ArrayList(targets)), selectedGuid, snapshots)
         }
     }
 }

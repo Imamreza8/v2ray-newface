@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 class BatchDeletionPlanTest {
@@ -67,5 +68,20 @@ class BatchDeletionPlanTest {
         assertTrue(valid(original, -1L))
         val empty = BatchDeletionPlan.fromVisible("g", BatchDeletionKind.INVALID, null, emptyList())!!
         assertFalse(empty.isStillValid(true, null, emptySet(), { null }, { null }))
+    }
+    @Test
+    fun targetsCannotBeMutatedAndReadFailuresDoNotBecomeApproval() {
+        val row = row("a", delay = -1)
+        val plan = BatchDeletionPlan.fromVisible("g", BatchDeletionKind.INVALID, null, listOf(row))!!
+        assertThrows(UnsupportedOperationException::class.java) {
+            (plan.targetGuids as MutableList<String>).clear()
+        }
+        assertEquals(listOf("a"), plan.targetGuids)
+        assertThrows(IllegalStateException::class.java) {
+            plan.isStillValid(true, null, setOf("a"), { throw IllegalStateException("read failure") }, { -1L })
+        }
+        assertThrows(IllegalStateException::class.java) {
+            plan.isStillValid(true, null, setOf("a"), { row.profile }, { throw IllegalStateException("read failure") })
+        }
     }
 }
