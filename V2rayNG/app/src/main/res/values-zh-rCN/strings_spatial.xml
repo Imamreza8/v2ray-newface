@@ -130,4 +130,5 @@
     <string name="export_scope_selected">选中的配置（%1$d）</string>
     <string name="export_scope_changed">分组或已确认的配置已更改，请重新选择导出范围。</string>
     <string name="save_order_changed">分组顺序已更改，请重试。</string>
+    <string name="bulk_delete_legacy_warning">警告：对话框打开时目标可能发生变化，发生错误时删除可能不完整。删除前请备份数据。</string>
 </resources>

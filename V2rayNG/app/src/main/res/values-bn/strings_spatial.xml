@@ -130,4 +130,5 @@
     <string name="export_scope_selected">নির্বাচিত কনফিগ (%1$d)</string>
     <string name="export_scope_changed">গ্রুপ বা নিশ্চিত করা কনফিগ বদলেছে। আবার রপ্তানির পরিসর বেছে নিন।</string>
     <string name="save_order_changed">গ্রুপের ক্রম পরিবর্তিত হয়েছে। আবার চেষ্টা করুন।</string>
+    <string name="bulk_delete_legacy_warning">সতর্কতা: এই ডায়ালগ খোলা থাকাকালে লক্ষ্য পরিবর্তিত হতে পারে এবং ত্রুটিতে মুছে ফেলা অসম্পূর্ণ থাকতে পারে। মুছে ফেলার আগে তথ্যের ব্যাকআপ নিন।</string>
 </resources>

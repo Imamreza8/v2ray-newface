@@ -130,4 +130,5 @@
     <string name="export_scope_selected">Cấu hình đã chọn (%1$d)</string>
     <string name="export_scope_changed">Nhóm hoặc cấu hình đã xác nhận đã thay đổi. Hãy chọn lại phạm vi xuất.</string>
     <string name="save_order_changed">Thứ tự nhóm đã thay đổi. Vui lòng thử lại.</string>
+    <string name="bulk_delete_legacy_warning">Cảnh báo: phạm vi có thể thay đổi khi hộp thoại đang mở và lỗi có thể khiến việc xóa không hoàn tất. Hãy sao lưu dữ liệu trước khi xóa.</string>
 </resources>

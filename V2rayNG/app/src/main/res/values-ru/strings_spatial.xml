@@ -130,4 +130,5 @@
     <string name="export_scope_selected">Выбранный профиль (%1$d)</string>
     <string name="export_scope_changed">Группа или подтверждённые профили изменились. Выберите область экспорта заново.</string>
     <string name="save_order_changed">Порядок группы изменился. Повторите попытку.</string>
+    <string name="bulk_delete_legacy_warning">Предупреждение: пока открыто окно, состав выбранных профилей может измениться, а ошибка может прервать удаление. Перед удалением сохраните резервную копию.</string>
 </resources>
