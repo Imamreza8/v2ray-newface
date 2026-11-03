@@ -601,19 +601,23 @@ object AngConfigManager {
      * @param subId The subscription ID.
      */
     fun sortByTestResultsForSub(subId: String) {
-        val serverList = MmkvManager.decodeServerList(subId)
-        if (serverList.isEmpty()) return
-
-        val sorted = serverList
-            .map { guid ->
-                val delay =
-                    MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L
-                guid to if (delay <= 0L) Long.MAX_VALUE else delay
+        val groupId = subId.ifEmpty { AppConfig.DEFAULT_SUBSCRIPTION_ID }
+        try {
+            val result = saveDelaySortedOrder(
+                expected = MmkvManager.decodeServerList(groupId).toList(),
+                readDelay = { guid -> MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis },
+                compareAndSave = { expected, proposed ->
+                    MmkvManager.reorderServerListIfUnchanged(groupId, expected, proposed)
+                },
+            )
+            if (result == SortedOrderOutcome.STALE) {
+                LogUtil.w(AppConfig.TAG, "Skipped stale automatic server sort for group $groupId")
             }
-            .sortedBy { it.second }
-            .map { it.first }
-            .toMutableList()
-        MmkvManager.encodeServerList(sorted, subId)
+        } catch (error: Exception) {
+            // This helper is also called from service worker callbacks: do not strand the worker
+            // on storage failure, and never log profile contents.
+            LogUtil.e(AppConfig.TAG, "Failed to sort servers for group $groupId", error)
+        }
     }
 
     /**

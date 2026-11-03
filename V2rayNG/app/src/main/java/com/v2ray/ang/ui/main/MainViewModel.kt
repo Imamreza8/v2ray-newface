@@ -363,7 +363,7 @@ class MainViewModel(
             MainAction.RemoveAllServers -> removeAllServerAsync()
             MainAction.RemoveDuplicateServers -> removeDuplicateServerAsync()
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
-            MainAction.SortByTestResults -> sortByTestResultsAsync()
+            MainAction.SortByTestResults -> prepareSaveOrder()
             MainAction.PrepareSaveOrder -> prepareSaveOrder()
             MainAction.ConfirmSaveOrder -> confirmSaveOrder()
             MainAction.DismissSaveOrder -> _uiState.update { it.copy(saveOrderProposal = null) }
@@ -1000,32 +1000,6 @@ class MainViewModel(
                 toastError(R.string.toast_failure)
             }
         }
-    }
-
-    private fun sortByTestResultsAsync() {
-        launchLoading {
-            withContext(ioDispatcher) {
-                try {
-                    sortByTestResultsInternal()
-                    cacheMutex.withLock { groupDataCache.clear() }
-                    setupGroupTab(forceRefresh = true)
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (e: Exception) {
-                    LogUtil.e(AppConfig.TAG, "Sort by test results failed", e)
-                    toastError(R.string.toast_failure)
-                }
-            }
-        }
-    }
-
-    private fun sortByTestResultsInternal() {
-        val subs = if (uiState.value.selectedGroupId.isEmpty()) {
-            dataSource.getSubsList()
-        } else {
-            listOf(uiState.value.selectedGroupId)
-        }
-        subs.forEach { dataSource.sortByTestResultsForSub(it) }
     }
 
     fun subscriptionIdChanged(id: String) {
