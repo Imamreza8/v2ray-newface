@@ -76,4 +76,8 @@
     <string name="spatial_duplicate_group_name">%1$s (%2$d)</string>
     <string name="spatial_no_subscription_details">لم يقدم هذا الاشتراك تفاصيل الاستخدام.</string>
     <string name="spatial_manual_create">إنشاء يدوي</string>
+    <string name="spatial_tools_test">الاختبارات والترتيب</string>
+    <string name="spatial_tools_subscriptions">الاشتراكات</string>
+    <string name="spatial_tools_other">أخرى</string>
+    <string name="spatial_tools_delete">الحذف</string>
 </resources>

@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -110,12 +111,53 @@ fun ManualImportDialog(onAction: (MainAction) -> Unit, onDismiss: () -> Unit) {
     )
 }
 
+internal enum class ToolCategory(@StringRes val labelRes: Int) {
+    TEST(R.string.spatial_tools_test),
+    SUBSCRIPTIONS(R.string.spatial_tools_subscriptions),
+    OTHER(R.string.spatial_tools_other),
+    DELETE(R.string.spatial_tools_delete),
+}
+
+internal fun toolCategory(action: MainMoreMenuAction): ToolCategory = when (action) {
+    MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing,
+    MainMoreMenuAction.SortByTestResults, MainMoreMenuAction.LocateSelected -> ToolCategory.TEST
+    MainMoreMenuAction.UpdateSubscriptions -> ToolCategory.SUBSCRIPTIONS
+    MainMoreMenuAction.RestartService, MainMoreMenuAction.ExportAll -> ToolCategory.OTHER
+    MainMoreMenuAction.DeleteAll, MainMoreMenuAction.DeleteDuplicate,
+    MainMoreMenuAction.DeleteInvalid -> ToolCategory.DELETE
+}
+
 @Composable
-fun MoreMenuContent(onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
-    items = MainMoreMenuAction.entries,
-    labelRes = { it.labelRes },
-    onSelected = onSelected
-)
+fun MoreMenuDialog(onSelected: (MainMoreMenuAction) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.acc_more)) },
+        text = {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                ToolCategory.entries.forEach { category ->
+                    key(category) {
+                        Text(
+                            stringResource(category.labelRes),
+                            modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                        )
+                        MainMoreMenuAction.entries.filter { toolCategory(it) == category }.forEach { action ->
+                            key(action) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(action.labelRes)) },
+                                    onClick = { onSelected(action) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
 
 @Composable
 fun ShareMethodDialog(

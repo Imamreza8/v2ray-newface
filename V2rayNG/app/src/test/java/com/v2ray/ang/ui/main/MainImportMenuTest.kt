@@ -51,4 +51,17 @@ class MainImportMenuTest {
         assertEquals(true, quick.none { it.action is MainAction.ImportManually })
     }
 
+    @Test
+    fun toolCategoriesKeepAllActionsAndSeparateDeletion() {
+        val categorized = ToolCategory.entries.flatMap { category ->
+            MainMoreMenuAction.entries.filter { toolCategory(it) == category }
+        }
+        assertEquals(MainMoreMenuAction.entries.toSet(), categorized.toSet())
+        assertEquals(MainMoreMenuAction.entries.size, categorized.size)
+        assertEquals(
+            setOf(MainMoreMenuAction.DeleteAll, MainMoreMenuAction.DeleteDuplicate, MainMoreMenuAction.DeleteInvalid),
+            categorized.filter { toolCategory(it) == ToolCategory.DELETE }.toSet(),
+        )
+    }
+
 }
