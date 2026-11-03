@@ -103,4 +103,9 @@
     <string name="display_sort_ping">التأخير (الأسرع أولاً)</string>
     <string name="display_sort_name">الاسم</string>
     <string name="scoped_test_top_note">يستند الأفضل إلى التأخير المعروض والحد الحالي؛ قد تكون النتائج السابقة فحص TCP.</string>
+    <string name="result_age_unknown_short">؟</string>
+    <string name="result_age_minutes_short">%1$d د</string>
+    <string name="result_age_hours_short">%1$d س</string>
+    <string name="result_age_days_short">%1$d ي</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>

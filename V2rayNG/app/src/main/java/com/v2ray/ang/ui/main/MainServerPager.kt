@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
@@ -65,6 +68,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 
 @Composable
 fun GroupPagerPage(
@@ -87,6 +91,15 @@ fun GroupPagerPage(
         mainViewModel.serverGroupState(groupId)
     }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
+    // One shared clock per visible page rather than one coroutine per server row.
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            delay(60_000L - (now % 60_000L))
+            nowMillis = System.currentTimeMillis()
+        }
+    }
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
     val actions = remember(
         onSelectServer,
@@ -105,6 +118,7 @@ fun GroupPagerPage(
     }
     ServerListPage(
         rows = groupState.rows,
+        nowMillis = nowMillis,
         selectedGuid = selectedGuid,
         locateTarget = locateTarget?.takeIf { it.groupId == groupId },
         canReorder = canReorder,
@@ -132,6 +146,7 @@ private class ServerRowActions(
 @Composable
 private fun ServerListPage(
     rows: List<ServerRowUiModel>,
+    nowMillis: Long,
     selectedGuid: String?,
     locateTarget: LocateTarget?,
     canReorder: Boolean,
@@ -168,6 +183,7 @@ private fun ServerListPage(
                 val content: @Composable () -> Unit = {
                     ServerItemColumn(
                         row = row,
+                        nowMillis = nowMillis,
                         isSelected = row.guid == selectedGuid,
                         doubleColumnDisplay = true,
                         actions = actions
@@ -219,6 +235,7 @@ private fun ServerListPage(
                         ) {
                             ServerItemRow(
                                 row = row,
+                                nowMillis = nowMillis,
                                 isSelected = row.guid == selectedGuid,
                                 actions = actions
                             )
@@ -228,6 +245,7 @@ private fun ServerListPage(
                 } else {
                     ServerItemRow(
                         row = row,
+                        nowMillis = nowMillis,
                         isSelected = row.guid == selectedGuid,
                         actions = actions
                     )
@@ -273,11 +291,13 @@ private fun LocateTargetEffect(
 @Composable
 private fun ServerItemRow(
     row: ServerRowUiModel,
+    nowMillis: Long,
     isSelected: Boolean,
     actions: ServerRowActions
 ) {
     ServerListItem(
         row = row,
+        nowMillis = nowMillis,
         isSelected = isSelected,
         doubleColumnDisplay = false,
         actions = actions
@@ -287,6 +307,7 @@ private fun ServerItemRow(
 @Composable
 private fun ServerItemColumn(
     row: ServerRowUiModel,
+    nowMillis: Long,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
     actions: ServerRowActions
@@ -294,6 +315,7 @@ private fun ServerItemColumn(
     Column {
         ServerListItem(
             row = row,
+            nowMillis = nowMillis,
             isSelected = isSelected,
             doubleColumnDisplay = doubleColumnDisplay,
             actions = actions
@@ -311,13 +333,13 @@ private fun ServerItemDivider() {
 @Composable
 private fun ServerListItem(
     row: ServerRowUiModel,
+    nowMillis: Long,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
     actions: ServerRowActions
 ) {
-    // A result is "old" when it is unknown-age (stored by an older version) or older than 30 minutes.
-    val stale = row.testDelayMillis != 0L &&
-            (row.testTime == 0L || System.currentTimeMillis() - row.testTime > STALE_RESULT_MILLIS)
+    val age = serverResultAge(row.testDelayMillis, row.testTime, nowMillis)
+    val stale = age != null && (age.unit == ResultAgeUnit.UNKNOWN || nowMillis - row.testTime > STALE_RESULT_MILLIS)
     val selectedStateDescription = if (isSelected) {
         stringResource(R.string.acc_selected_server)
     } else {
@@ -327,7 +349,7 @@ private fun ServerListItem(
     val cardShape = RoundedCornerShape(18.dp)
     val cardModifier = if (spatial) {
         Modifier
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
             .clip(cardShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .border(
@@ -372,16 +394,16 @@ private fun ServerListItem(
         }
 
         // Ping badge: the result is the first thing you look for, so it gets its own coloured block
-        PingBadge(delayMillis = row.testDelayMillis, stale = stale)
+        PingBadge(delayMillis = row.testDelayMillis, age = age, stale = stale)
 
         Column(
             Modifier
                 .weight(1f)
-                .padding(start = 10.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+                .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
         ) {
             Text(
                 row.remarks,
-                style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
+                style = MaterialTheme.typography.bodyMedium.copy(lineBreak = LineBreak.Paragraph),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -420,7 +442,7 @@ private fun ServerListItem(
         }
 
         // One tidy "more" button (share, edit, delete live in its menu) instead of three icons per row
-        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(40.dp)) {
+        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(48.dp)) {
             Icon(
                 painterResource(R.drawable.ic_more_vert_24dp),
                 stringResource(R.string.acc_more),
@@ -432,7 +454,7 @@ private fun ServerListItem(
 
 /** Coloured result block: green < 150 ms, amber < 300 ms, red above or failed, grey = untested. Old results are dimmed. */
 @Composable
-private fun PingBadge(delayMillis: Long, stale: Boolean) {
+private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
     val color = when {
         delayMillis < 0L -> colorPingRed
         delayMillis == 0L -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -445,13 +467,31 @@ private fun PingBadge(delayMillis: Long, stale: Boolean) {
         delayMillis == 0L -> stringResource(R.string.spatial_not_tested)
         else -> stringResource(R.string.server_test_delay_value, delayMillis)
     }
+    val ageShort = age?.let {
+        when (it.unit) {
+            ResultAgeUnit.UNKNOWN -> stringResource(R.string.result_age_unknown_short)
+            ResultAgeUnit.MINUTES -> stringResource(R.string.result_age_minutes_short, it.value)
+            ResultAgeUnit.HOURS -> stringResource(R.string.result_age_hours_short, it.value)
+            ResultAgeUnit.DAYS -> stringResource(R.string.result_age_days_short, it.value)
+        }
+    }
+    val ageAccessible = age?.let {
+        when (it.unit) {
+            ResultAgeUnit.UNKNOWN -> stringResource(R.string.top_age_unknown)
+            ResultAgeUnit.MINUTES -> stringResource(R.string.top_age_minutes, it.value)
+            ResultAgeUnit.HOURS -> stringResource(R.string.top_age_hours, it.value)
+            ResultAgeUnit.DAYS -> stringResource(R.string.top_age_days, it.value)
+        }
+    }
+    val spoken = if (ageAccessible == null) label else stringResource(R.string.result_age_accessible, label, ageAccessible)
     val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
-            .width(68.dp)
+            .width(56.dp)
+            .clearAndSetSemantics { contentDescription = spoken }
             .clip(shape)
             .background(color.copy(alpha = if (stale) 0.08f else 0.16f))
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -462,12 +502,13 @@ private fun PingBadge(delayMillis: Long, stale: Boolean) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (stale && delayMillis != 0L) {
+        if (ageShort != null) {
             Text(
-                stringResource(R.string.spatial_result_old),
-                color = color.copy(alpha = 0.6f),
+                ageShort,
+                color = color.copy(alpha = if (stale) 0.6f else 0.85f),
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

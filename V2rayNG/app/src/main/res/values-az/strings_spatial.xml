@@ -103,4 +103,9 @@
     <string name="display_sort_ping">Pinq (ən sürətli əvvəl)</string>
     <string name="display_sort_name">Ad</string>
     <string name="scoped_test_top_note">Ən yaxşılar göstərilən gecikmə və həddə əsaslanır; əvvəlki nəticə TCP ola bilər.</string>
+    <string name="result_age_unknown_short">?</string>
+    <string name="result_age_minutes_short">%1$d dəq</string>
+    <string name="result_age_hours_short">%1$d s</string>
+    <string name="result_age_days_short">%1$d gün</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>

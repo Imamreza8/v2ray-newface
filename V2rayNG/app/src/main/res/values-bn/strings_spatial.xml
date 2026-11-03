@@ -103,4 +103,9 @@
     <string name="display_sort_ping">পিং (দ্রুততম আগে)</string>
     <string name="display_sort_name">নাম</string>
     <string name="scoped_test_top_note">সেরাগুলি দেখানো বিলম্ব ও সীমা অনুযায়ী; আগের ফল TCP হতে পারে।</string>
+    <string name="result_age_unknown_short">?</string>
+    <string name="result_age_minutes_short">%1$dমি</string>
+    <string name="result_age_hours_short">%1$dঘ</string>
+    <string name="result_age_days_short">%1$dদি</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>

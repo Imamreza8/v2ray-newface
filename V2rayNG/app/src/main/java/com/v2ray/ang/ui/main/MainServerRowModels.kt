@@ -72,3 +72,18 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
     }
     return parts.joinToString(" / ")
 }
+
+internal enum class ResultAgeUnit { UNKNOWN, MINUTES, HOURS, DAYS }
+internal data class ResultAge(val unit: ResultAgeUnit, val value: Long = 0L)
+
+/** No age for untested entries; timestamps from old versions or a future clock are unknown. */
+internal fun serverResultAge(delayMillis: Long, testedAt: Long, now: Long): ResultAge? {
+    if (delayMillis == 0L) return null
+    if (testedAt <= 0L || now <= 0L || testedAt > now) return ResultAge(ResultAgeUnit.UNKNOWN)
+    val minutes = (now - testedAt) / 60_000L
+    return when {
+        minutes < 60L -> ResultAge(ResultAgeUnit.MINUTES, minutes)
+        minutes < 24L * 60L -> ResultAge(ResultAgeUnit.HOURS, minutes / 60L)
+        else -> ResultAge(ResultAgeUnit.DAYS, minutes / (24L * 60L))
+    }
+}

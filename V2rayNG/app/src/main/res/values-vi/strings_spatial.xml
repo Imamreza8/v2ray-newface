@@ -103,4 +103,9 @@
     <string name="display_sort_ping">Ping (nhanh nhất trước)</string>
     <string name="display_sort_name">Tên</string>
     <string name="scoped_test_top_note">Mục tốt nhất dựa trên độ trễ hiển thị và ngưỡng; kết quả trước đó có thể là kiểm tra TCP.</string>
+    <string name="result_age_unknown_short">?</string>
+    <string name="result_age_minutes_short">%1$dp</string>
+    <string name="result_age_hours_short">%1$dg</string>
+    <string name="result_age_days_short">%1$dn</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>

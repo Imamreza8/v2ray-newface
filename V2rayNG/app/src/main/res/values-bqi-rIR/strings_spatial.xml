@@ -103,4 +103,9 @@
     <string name="display_sort_ping">پینگ (کمترین اول)</string>
     <string name="display_sort_name">نام</string>
     <string name="scoped_test_top_note">برترها بر اساس پینگ نمایش‌داده‌شده و آستانه فعلی هستند؛ نتیجه قبلی ممکن است TCP باشد.</string>
+    <string name="result_age_unknown_short">؟</string>
+    <string name="result_age_minutes_short">%1$dد</string>
+    <string name="result_age_hours_short">%1$dس</string>
+    <string name="result_age_days_short">%1$dر</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>

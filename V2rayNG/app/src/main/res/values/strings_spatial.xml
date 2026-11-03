@@ -104,4 +104,9 @@
     <string name="display_sort_ping">Ping (fastest first)</string>
     <string name="display_sort_name">Name</string>
     <string name="scoped_test_top_note">Top is based on the displayed delay and threshold; previous results may be TCP checks.</string>
+    <string name="result_age_unknown_short">?</string>
+    <string name="result_age_minutes_short">%1$dm</string>
+    <string name="result_age_hours_short">%1$dh</string>
+    <string name="result_age_days_short">%1$dd</string>
+    <string name="result_age_accessible">%1$s · %2$s</string>
 </resources>
