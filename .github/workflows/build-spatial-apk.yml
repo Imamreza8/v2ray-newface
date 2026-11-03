@@ -245,3 +245,10 @@ jobs:
         name: ${{ inputs.source_version == 'previous-v6' && 'spatial-previous-v6-arm64-debug' || 'spatial-arm64-debug' }}
         if-no-files-found: error
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk
+
+    - name: Lint test options sheet (Play Store and F-Droid)
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:lintPlaystoreDebug :app:lintFdroidDebug -PABI_FILTERS=arm64-v8a

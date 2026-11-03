@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">Нет подходящих групп</string>
     <string name="newface_update_info">Обновления Newface собираются на странице Actions этого репозитория. APK оригинального v2rayNG не обновит это приложение.</string>
     <string name="newface_update_open">Открыть сборки Newface</string>
+    <string name="scoped_test">Тест</string>
+    <string name="scoped_test_options">Другие варианты теста</string>
+    <string name="scoped_test_real">Реальная задержка (через прокси)</string>
+    <string name="scoped_test_tcp">Быстрая проверка (только доступность сервера)</string>
+    <string name="scoped_test_top">Проверить лучшие заново (реальная задержка)</string>
+    <string name="scoped_test_failed">Проверить ошибки заново (реальная задержка)</string>
+    <string name="scoped_test_current">Проверить текущее соединение</string>
+    <string name="scoped_test_scope">%1$d профилей · Группа: %2$s · Фильтр: %3$s</string>
+    <string name="scoped_test_current_scope">Текущее соединение · 1 соединение</string>
+    <string name="scoped_test_search">Поиск активен</string>
+    <string name="scoped_test_empty">В этой области нет профилей</string>
+    <string name="scoped_test_updating">Список ещё обновляется; повторите попытку.</string>
+    <string name="scoped_test_changed">Группа или подтверждённые профили изменились. Выберите тест заново.</string>
+    <string name="scoped_test_requires_connection">Сначала подключитесь, чтобы проверить текущее соединение.</string>
+    <string name="scoped_test_no_auto_actions">Тест выбранной области не удаляет и не сортирует профили автоматически.</string>
 </resources>

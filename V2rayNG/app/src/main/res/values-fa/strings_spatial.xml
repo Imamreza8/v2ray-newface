@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">گروهی پیدا نشد</string>
     <string name="newface_update_info">به‌روزرسانی‌های Newface در بخش Actions همین مخزن ساخته می‌شوند. فایل‌های v2rayNG اصلی این برنامه را به‌روزرسانی نمی‌کنند.</string>
     <string name="newface_update_open">باز کردن ساخت‌های Newface</string>
+    <string name="scoped_test">تست</string>
+    <string name="scoped_test_options">گزینه‌های بیشتر تست</string>
+    <string name="scoped_test_real">تأخیر واقعی (از طریق پروکسی)</string>
+    <string name="scoped_test_tcp">بررسی سریع (فقط رسیدن به سرور)</string>
+    <string name="scoped_test_top">تست دوباره برترها (تأخیر واقعی)</string>
+    <string name="scoped_test_failed">تست دوباره ناموفق‌ها (تأخیر واقعی)</string>
+    <string name="scoped_test_current">تست اتصال فعلی</string>
+    <string name="scoped_test_scope">%1$d کانفیگ · گروه: %2$s · فیلتر: %3$s</string>
+    <string name="scoped_test_current_scope">اتصال فعلی · ۱ اتصال</string>
+    <string name="scoped_test_search">جست‌وجو فعال است</string>
+    <string name="scoped_test_empty">در این محدوده کانفیگی وجود ندارد</string>
+    <string name="scoped_test_updating">لیست هنوز در حال به‌روزرسانی است؛ دوباره تلاش کنید.</string>
+    <string name="scoped_test_changed">گروه یا کانفیگ‌های تأییدشده تغییر کرده‌اند. تست را دوباره انتخاب کنید.</string>
+    <string name="scoped_test_requires_connection">برای تست اتصال فعلی ابتدا متصل شوید.</string>
+    <string name="scoped_test_no_auto_actions">تست محدوده‌ای کانفیگ‌ها را خودکار حذف یا مرتب نمی‌کند.</string>
 </resources>

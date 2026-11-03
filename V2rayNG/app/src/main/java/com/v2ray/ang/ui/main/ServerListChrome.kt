@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,18 +10,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
@@ -34,6 +46,24 @@ internal fun ServerListChrome(
     uiState: MainUiState,
     onAction: (MainAction) -> Unit,
 ) {
+    var showTestOptions by rememberSaveable { mutableStateOf(false) }
+    if (showTestOptions) {
+        TestOptionsSheet(
+            enabled = !uiState.isTesting,
+            onChoose = { kind ->
+                showTestOptions = false
+                onAction(MainAction.PrepareScopedTest(kind))
+            },
+            onDismiss = { showTestOptions = false },
+        )
+    }
+    uiState.scopedTestProposal?.let { proposal ->
+        ScopedTestConfirmDialog(
+            proposal = proposal,
+            onConfirm = { onAction(MainAction.ConfirmScopedTest) },
+            onDismiss = { onAction(MainAction.DismissScopedTest) },
+        )
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
         val stats = uiState.runStats
         if (uiState.isTesting && stats.total > stats.done) {
@@ -56,11 +86,24 @@ internal fun ServerListChrome(
                 }
             }
         }
-        ServerFilterBar(
-            selected = uiState.statusFilter,
-            counts = uiState.filterCounts,
-            onSelect = { onAction(MainAction.SetStatusFilter(it)) },
-        )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
+                enabled = !uiState.isTesting,
+            ) { Text(stringResource(R.string.scoped_test)) }
+            IconButton(onClick = { showTestOptions = true }, enabled = !uiState.isTesting) {
+                Icon(
+                    painterResource(R.drawable.ic_expand_more_24dp),
+                    contentDescription = stringResource(R.string.scoped_test_options),
+                )
+            }
+            ServerFilterBar(
+                modifier = Modifier.weight(1f),
+                selected = uiState.statusFilter,
+                counts = uiState.filterCounts,
+                onSelect = { onAction(MainAction.SetStatusFilter(it)) },
+            )
+        }
     }
 }
 
@@ -98,13 +141,13 @@ private fun TestProgressStrip(stats: TestRunStats, onCancel: () -> Unit) {
 
 @Composable
 private fun ServerFilterBar(
+    modifier: Modifier = Modifier,
     selected: ServerStatusFilter,
     counts: FilterCounts,
     onSelect: (ServerStatusFilter) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -120,4 +163,72 @@ private fun ServerFilterBar(
 @Composable
 private fun FilterChipItem(selected: Boolean, label: String, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+}
+
+// ModalBottomSheet is experimental in the pinned Material 3 version; reevaluate when its stable
+// equivalent is available. ScopedTestRequestsTest covers the selection/confirmation contract.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TestOptionsSheet(enabled: Boolean, onChoose: (ScopedTestKind) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .navigationBarsPadding().padding(horizontal = 16.dp),
+        ) {
+            Text(stringResource(R.string.scoped_test_options), style = MaterialTheme.typography.titleMedium)
+            ScopedTestKind.entries.forEach { kind ->
+                TextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    onClick = { onChoose(kind) },
+                ) {
+                    Text(stringResource(scopedTestLabel(kind)), modifier = Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScopedTestConfirmDialog(proposal: ScopedTestProposal, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val isCurrent = proposal.kind == ScopedTestKind.CURRENT
+    val filterLabel = if (!isCurrent) {
+        val resource = when (proposal.filter) {
+            ServerStatusFilter.ALL -> R.string.filter_all
+            ServerStatusFilter.TOP -> R.string.filter_top
+            ServerStatusFilter.ALIVE -> R.string.filter_alive
+            ServerStatusFilter.UNTESTED -> R.string.filter_untested
+            ServerStatusFilter.FAILED -> R.string.filter_failed
+        }
+        stringResource(resource, proposal.visibleCount)
+    } else ""
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(scopedTestLabel(proposal.kind))) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    if (isCurrent) stringResource(R.string.scoped_test_current_scope)
+                    else stringResource(R.string.scoped_test_scope, proposal.guids.size, proposal.groupName, filterLabel)
+                )
+                if (!isCurrent && proposal.searchActive) Text(stringResource(R.string.scoped_test_search))
+                if (!isCurrent && proposal.guids.isEmpty()) Text(stringResource(R.string.scoped_test_empty))
+                if (!isCurrent) Text(stringResource(R.string.scoped_test_no_auto_actions))
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = isCurrent || proposal.guids.isNotEmpty(), onClick = onConfirm) {
+                Text(stringResource(R.string.spatial_speed_start))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+private fun scopedTestLabel(kind: ScopedTestKind): Int = when (kind) {
+    ScopedTestKind.REAL -> R.string.scoped_test_real
+    ScopedTestKind.TCP -> R.string.scoped_test_tcp
+    ScopedTestKind.TOP -> R.string.scoped_test_top
+    ScopedTestKind.FAILED -> R.string.scoped_test_failed
+    ScopedTestKind.CURRENT -> R.string.scoped_test_current
 }

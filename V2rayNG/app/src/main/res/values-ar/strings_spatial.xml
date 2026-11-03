@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">لا توجد مجموعات مطابقة</string>
     <string name="newface_update_info">تُبنى تحديثات Newface في صفحة Actions لهذا المستودع. لا تحدّث ملفات v2rayNG الأصلية هذا التطبيق.</string>
     <string name="newface_update_open">فتح إصدارات Newface</string>
+    <string name="scoped_test">اختبار</string>
+    <string name="scoped_test_options">خيارات اختبار إضافية</string>
+    <string name="scoped_test_real">التأخير الفعلي (عبر الوكيل)</string>
+    <string name="scoped_test_tcp">فحص سريع (الوصول إلى الخادم فقط)</string>
+    <string name="scoped_test_top">إعادة اختبار الأفضل (تأخير فعلي)</string>
+    <string name="scoped_test_failed">إعادة اختبار الفاشلة (تأخير فعلي)</string>
+    <string name="scoped_test_current">اختبار الاتصال الحالي</string>
+    <string name="scoped_test_scope">%1$d إعدادات · المجموعة: %2$s · المرشح: %3$s</string>
+    <string name="scoped_test_current_scope">الاتصال الحالي · اتصال واحد</string>
+    <string name="scoped_test_search">البحث نشط</string>
+    <string name="scoped_test_empty">لا توجد إعدادات في هذا النطاق</string>
+    <string name="scoped_test_updating">لا تزال القائمة تتحدث؛ حاول مجدداً.</string>
+    <string name="scoped_test_changed">تغيرت المجموعة أو الإعدادات المؤكدة. اختر الاختبار مجدداً.</string>
+    <string name="scoped_test_requires_connection">اتصل أولاً لاختبار الاتصال الحالي.</string>
+    <string name="scoped_test_no_auto_actions">لا تحذف الاختبارات المحددة الإعدادات أو ترتبها تلقائياً.</string>
 </resources>

@@ -106,6 +106,9 @@ class MainViewModel(
     // Bulk-test run tracking (main thread only): which configs were asked, which already answered.
     private var runGuids: List<String> = emptyList()
     private var runOnlyTcp = false
+    private var runGroupId = ""
+    private var resumeGroupId = ""
+    private var scopedTestPreparationJob: Job? = null
     private val runDone = HashSet<String>()
     private var runOk = 0
     private var runFailed = 0
@@ -346,8 +349,11 @@ class MainViewModel(
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
             MainAction.TestAllServers -> testAllRealPing(true)
             MainAction.TestRealAllServers -> testAllRealPing()
+            is MainAction.PrepareScopedTest -> prepareScopedTest(action.kind)
+            MainAction.ConfirmScopedTest -> confirmScopedTest()
+            MainAction.DismissScopedTest -> _uiState.update { it.copy(scopedTestProposal = null) }
             MainAction.CancelTesting -> cancelByUser()
-            MainAction.ResumeTesting -> startGuidTest(resumeGuids, runOnlyTcp)
+            MainAction.ResumeTesting -> startGuidTest(resumeGuids, runOnlyTcp, resumeGroupId)
             // The theme itself is observed from ThemeManager by AppTheme, so only persist the choice here.
             is MainAction.SetSpatialTheme ->
                 viewModelScope.launch(ioDispatcher) { ThemeManager.setSpatialThemeEnabled(action.enabled) }
@@ -1036,6 +1042,75 @@ class MainViewModel(
         }
     }
 
+    /** Capture the exact visible IDs before confirmation; never test an asynchronously changed filter. */
+    private fun prepareScopedTest(kind: ScopedTestKind) {
+        scopedTestPreparationJob?.cancel()
+        val ui = _uiState.value
+        if (ui.isTesting) return
+        if (kind == ScopedTestKind.CURRENT) {
+            if (!ui.isRunning) {
+                toast(R.string.scoped_test_requires_connection)
+                return
+            }
+            _uiState.update {
+                it.copy(scopedTestProposal = ScopedTestProposal(kind, "", "", ui.statusFilter, 0, false, emptyList()))
+            }
+            return
+        }
+        val group = ui.groups.firstOrNull { it.id == ui.selectedGroupId } ?: return
+        val state = mutableServerGroupState(group.id).value
+        val keyword = keywordFilter
+        if (!scopedListReady(state, keyword, ui.statusFilter)) {
+            toast(R.string.scoped_test_updating)
+            return
+        }
+        scopedTestPreparationJob = viewModelScope.launch {
+            val guids = withContext(defaultDispatcher) { scopedTestGuids(kind, state.servers, state.topMaxMillis) }
+            val current = _uiState.value
+            if (current.isTesting || current.selectedGroupId != group.id || current.statusFilter != ui.statusFilter ||
+                keywordFilter != keyword || mutableServerGroupState(group.id).value !== state
+            ) {
+                toast(R.string.scoped_test_updating)
+                return@launch
+            }
+            _uiState.update {
+                it.copy(scopedTestProposal = ScopedTestProposal(
+                    kind, group.id, group.remarks, ui.statusFilter, state.servers.size, keyword.isNotBlank(), guids,
+                ))
+            }
+        }
+    }
+
+    private fun confirmScopedTest() {
+        val proposal = _uiState.value.scopedTestProposal ?: return
+        _uiState.update { it.copy(scopedTestProposal = null) }
+        if (_uiState.value.isTesting) return
+        if (proposal.kind == ScopedTestKind.CURRENT) {
+            if (_uiState.value.isRunning) testCurrentServerRealPing()
+            else toast(R.string.scoped_test_requires_connection)
+            return
+        }
+        if (proposal.guids.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val existing = withContext(ioDispatcher) { dataSource.getServerGuidList(proposal.groupId).toSet() }
+                val groupExists = _uiState.value.groups.any { it.id == proposal.groupId }
+                if (!scopedSnapshotStillExists(proposal.guids, existing, groupExists)) {
+                    toast(R.string.scoped_test_changed)
+                    return@launch
+                }
+                // Another test might have started while the membership was being checked.
+                if (_uiState.value.isTesting) return@launch
+                startGuidTest(proposal.guids, proposal.kind == ScopedTestKind.TCP, proposal.groupId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to validate scoped test", e)
+                toastError(R.string.toast_failure)
+            }
+        }
+    }
+
     fun testAllRealPing(onlyTcp: Boolean = false) {
         cancelAllPing()
         val groupId = uiState.value.selectedGroupId
@@ -1044,7 +1119,7 @@ class MainViewModel(
             return
         }
         val serverGuids = servers.map { it.guid }
-        beginRun(serverGuids, onlyTcp)
+        beginRun(serverGuids, onlyTcp, groupId)
         // Previous results are kept (not reset to "untested"): each one is replaced as soon as its
         // new result arrives, and a cancelled run does not throw the old results away.
         val request = testRequests.beginBulk(groupId)
@@ -1068,11 +1143,11 @@ class MainViewModel(
     }
 
     /** Real-pings exactly [guids] (any group). Group auto-remove/auto-sort do not apply (no subscriptionId). */
-    private fun startGuidTest(guids: List<String>, onlyTcp: Boolean = false) {
-        cancelAllPing()
+    private fun startGuidTest(guids: List<String>, onlyTcp: Boolean = false, groupId: String = uiState.value.selectedGroupId) {
         if (guids.isEmpty()) return
-        beginRun(guids, onlyTcp)
-        val request = testRequests.beginBulk(uiState.value.selectedGroupId)
+        cancelAllPing()
+        beginRun(guids, onlyTcp, groupId)
+        val request = testRequests.beginBulk(groupId)
         val message = TestServiceMessage(
             key = AppConfig.MSG_MEASURE_CONFIG_START,
             subscriptionId = "",
@@ -1241,9 +1316,10 @@ class MainViewModel(
         }
     }
 
-    private fun beginRun(guids: List<String>, onlyTcp: Boolean) {
+    private fun beginRun(guids: List<String>, onlyTcp: Boolean, groupId: String) {
         runGuids = guids
         runOnlyTcp = onlyTcp
+        runGroupId = groupId
         runDone.clear()
         runOk = 0
         runFailed = 0
@@ -1261,6 +1337,7 @@ class MainViewModel(
         val remaining = if (testRequests.bulk != null) runGuids.filter { it !in runDone } else emptyList()
         cancelAllPing()
         resumeGuids = remaining
+        resumeGroupId = runGroupId
         publishRunStats()
         _uiState.update { it.copy(resumableCount = remaining.size) }
     }

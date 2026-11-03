@@ -70,6 +70,20 @@ data class FilterCounts(
     val failed: Int = 0,
 )
 
+/** The choices in the list test controls; TOP and FAILED are restricted to visible rows. */
+enum class ScopedTestKind { REAL, TCP, TOP, FAILED, CURRENT }
+
+/** Immutable confirmation snapshot. A group ID may be empty for the all-servers group. */
+data class ScopedTestProposal(
+    val kind: ScopedTestKind,
+    val groupId: String,
+    val groupName: String,
+    val filter: ServerStatusFilter,
+    val visibleCount: Int,
+    val searchActive: Boolean,
+    val guids: List<String>,
+)
+
 /** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
 data class TestRunStats(
     val total: Int = 0,
@@ -124,6 +138,7 @@ data class MainUiState(
     val filterCounts: FilterCounts = FilterCounts(),
     val simpleMode: Boolean = false,
     val expandProposal: ExpandProposal? = null,
+    val scopedTestProposal: ScopedTestProposal? = null,
     val runStats: TestRunStats = TestRunStats(),
     /** Number of configs left from a run the user cancelled; 0 = nothing to resume. */
     val resumableCount: Int = 0,
@@ -145,6 +160,9 @@ sealed interface MainAction {
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
     data object TestRealAllServers : MainAction
+    data class PrepareScopedTest(val kind: ScopedTestKind) : MainAction
+    data object ConfirmScopedTest : MainAction
+    data object DismissScopedTest : MainAction
     data object CancelTesting : MainAction
     data object RemoveAllServers : MainAction
     data object RemoveDuplicateServers : MainAction

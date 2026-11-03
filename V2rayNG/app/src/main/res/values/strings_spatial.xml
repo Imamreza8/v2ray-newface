@@ -84,4 +84,19 @@
     <string name="spatial_no_matching_groups">No matching groups</string>
     <string name="newface_update_info">Newface updates are built on this repository’s GitHub Actions page. Upstream v2rayNG APKs cannot update this app.</string>
     <string name="newface_update_open">Open Newface builds</string>
+    <string name="scoped_test">Test</string>
+    <string name="scoped_test_options">More test options</string>
+    <string name="scoped_test_real">Real delay (through the proxy)</string>
+    <string name="scoped_test_tcp">Quick check (server reachability only)</string>
+    <string name="scoped_test_top">Retest top (real delay)</string>
+    <string name="scoped_test_failed">Retest failed (real delay)</string>
+    <string name="scoped_test_current">Test current connection</string>
+    <string name="scoped_test_scope">%1$d configs · Group: %2$s · Filter: %3$s</string>
+    <string name="scoped_test_current_scope">Current connection · 1 connection</string>
+    <string name="scoped_test_search">Search is active</string>
+    <string name="scoped_test_empty">No configs in this scope</string>
+    <string name="scoped_test_updating">The list is still updating; try again.</string>
+    <string name="scoped_test_changed">The group or confirmed configs changed. Choose the test again.</string>
+    <string name="scoped_test_requires_connection">Connect first to test the current connection.</string>
+    <string name="scoped_test_no_auto_actions">Scoped tests do not automatically delete or reorder configs.</string>
 </resources>

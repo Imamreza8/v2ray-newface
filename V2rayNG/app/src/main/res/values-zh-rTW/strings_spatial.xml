@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">沒有相符的群組</string>
     <string name="newface_update_info">Newface 更新在此儲存庫的 Actions 頁面建置。原版 v2rayNG APK 無法更新此應用程式。</string>
     <string name="newface_update_open">開啟 Newface 建置</string>
+    <string name="scoped_test">測試</string>
+    <string name="scoped_test_options">更多測試選項</string>
+    <string name="scoped_test_real">真實延遲（透過代理）</string>
+    <string name="scoped_test_tcp">快速檢查（僅檢查伺服器可達性）</string>
+    <string name="scoped_test_top">重新測試最佳設定（真實延遲）</string>
+    <string name="scoped_test_failed">重新測試失敗設定（真實延遲）</string>
+    <string name="scoped_test_current">測試目前連線</string>
+    <string name="scoped_test_scope">%1$d 個設定 · 群組：%2$s · 篩選：%3$s</string>
+    <string name="scoped_test_current_scope">目前連線 · 1 個連線</string>
+    <string name="scoped_test_search">搜尋已啟用</string>
+    <string name="scoped_test_empty">此範圍內沒有設定</string>
+    <string name="scoped_test_updating">清單仍在更新，請重試。</string>
+    <string name="scoped_test_changed">群組或已確認的設定已變更，請重新選擇測試。</string>
+    <string name="scoped_test_requires_connection">請先連線，再測試目前連線。</string>
+    <string name="scoped_test_no_auto_actions">範圍測試不會自動刪除或重新排序設定。</string>
 </resources>

@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">Uyğun qrup tapılmadı</string>
     <string name="newface_update_info">Newface yeniləmələri bu deponun Actions səhifəsində hazırlanır. Orijinal v2rayNG faylları bu proqramı yeniləmir.</string>
     <string name="newface_update_open">Newface quruluşlarını aç</string>
+    <string name="scoped_test">Yoxla</string>
+    <string name="scoped_test_options">Digər yoxlama seçimləri</string>
+    <string name="scoped_test_real">Real gecikmə (proksi vasitəsilə)</string>
+    <string name="scoped_test_tcp">Sürətli yoxlama (yalnız serverə çatma)</string>
+    <string name="scoped_test_top">Ən yaxşıları yenidən yoxla (real gecikmə)</string>
+    <string name="scoped_test_failed">Uğursuzları yenidən yoxla (real gecikmə)</string>
+    <string name="scoped_test_current">Cari bağlantını yoxla</string>
+    <string name="scoped_test_scope">%1$d konfiqurasiya · Qrup: %2$s · Filtr: %3$s</string>
+    <string name="scoped_test_current_scope">Cari bağlantı · 1 bağlantı</string>
+    <string name="scoped_test_search">Axtarış aktivdir</string>
+    <string name="scoped_test_empty">Bu əhatədə konfiqurasiya yoxdur</string>
+    <string name="scoped_test_updating">Siyahı yenilənir; yenidən cəhd edin.</string>
+    <string name="scoped_test_changed">Qrup və ya təsdiqlənmiş konfiqurasiyalar dəyişdi. Yoxlamanı yenidən seçin.</string>
+    <string name="scoped_test_requires_connection">Cari bağlantını yoxlamaq üçün əvvəlcə qoşulun.</string>
+    <string name="scoped_test_no_auto_actions">Əhatəli yoxlamalar konfiqurasiyaları avtomatik silmir və sıralamır.</string>
 </resources>

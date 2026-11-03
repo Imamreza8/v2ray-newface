@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">Không có nhóm phù hợp</string>
     <string name="newface_update_info">Bản cập nhật Newface được tạo trên trang Actions của kho này. APK v2rayNG gốc không thể cập nhật ứng dụng này.</string>
     <string name="newface_update_open">Mở bản dựng Newface</string>
+    <string name="scoped_test">Kiểm tra</string>
+    <string name="scoped_test_options">Thêm tùy chọn kiểm tra</string>
+    <string name="scoped_test_real">Độ trễ thực (qua proxy)</string>
+    <string name="scoped_test_tcp">Kiểm tra nhanh (chỉ khả năng tới máy chủ)</string>
+    <string name="scoped_test_top">Kiểm tra lại tốt nhất (độ trễ thực)</string>
+    <string name="scoped_test_failed">Kiểm tra lại thất bại (độ trễ thực)</string>
+    <string name="scoped_test_current">Kiểm tra kết nối hiện tại</string>
+    <string name="scoped_test_scope">%1$d cấu hình · Nhóm: %2$s · Bộ lọc: %3$s</string>
+    <string name="scoped_test_current_scope">Kết nối hiện tại · 1 kết nối</string>
+    <string name="scoped_test_search">Đang bật tìm kiếm</string>
+    <string name="scoped_test_empty">Không có cấu hình trong phạm vi này</string>
+    <string name="scoped_test_updating">Danh sách đang cập nhật; hãy thử lại.</string>
+    <string name="scoped_test_changed">Nhóm hoặc cấu hình đã xác nhận thay đổi. Hãy chọn lại phép kiểm tra.</string>
+    <string name="scoped_test_requires_connection">Hãy kết nối trước khi kiểm tra kết nối hiện tại.</string>
+    <string name="scoped_test_no_auto_actions">Kiểm tra theo phạm vi không tự động xóa hoặc sắp xếp cấu hình.</string>
 </resources>

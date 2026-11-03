@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">মিলে এমন গ্রুপ নেই</string>
     <string name="newface_update_info">Newface আপডেট এই রিপোজিটরির Actions পৃষ্ঠায় তৈরি হয়। মূল v2rayNG APK এই অ্যাপ আপডেট করতে পারে না।</string>
     <string name="newface_update_open">Newface বিল্ড খুলুন</string>
+    <string name="scoped_test">পরীক্ষা</string>
+    <string name="scoped_test_options">আরও পরীক্ষার বিকল্প</string>
+    <string name="scoped_test_real">প্রকৃত বিলম্ব (প্রক্সির মাধ্যমে)</string>
+    <string name="scoped_test_tcp">দ্রুত পরীক্ষা (শুধু সার্ভারে পৌঁছানো)</string>
+    <string name="scoped_test_top">সেরাগুলি আবার পরীক্ষা (প্রকৃত বিলম্ব)</string>
+    <string name="scoped_test_failed">ব্যর্থগুলি আবার পরীক্ষা (প্রকৃত বিলম্ব)</string>
+    <string name="scoped_test_current">বর্তমান সংযোগ পরীক্ষা</string>
+    <string name="scoped_test_scope">%1$d কনফিগ · গ্রুপ: %2$s · ফিল্টার: %3$s</string>
+    <string name="scoped_test_current_scope">বর্তমান সংযোগ · ১টি সংযোগ</string>
+    <string name="scoped_test_search">অনুসন্ধান সক্রিয়</string>
+    <string name="scoped_test_empty">এই পরিসরে কোনো কনফিগ নেই</string>
+    <string name="scoped_test_updating">তালিকা এখনও আপডেট হচ্ছে; আবার চেষ্টা করুন।</string>
+    <string name="scoped_test_changed">গ্রুপ বা নিশ্চিত কনফিগ বদলেছে। পরীক্ষা আবার বেছে নিন।</string>
+    <string name="scoped_test_requires_connection">বর্তমান সংযোগ পরীক্ষা করতে প্রথমে সংযুক্ত হন।</string>
+    <string name="scoped_test_no_auto_actions">নির্দিষ্ট পরিসরের পরীক্ষা স্বয়ংক্রিয়ভাবে কনফিগ মুছে বা সাজায় না।</string>
 </resources>

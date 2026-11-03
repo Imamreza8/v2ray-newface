@@ -83,4 +83,19 @@
     <string name="spatial_no_matching_groups">没有匹配的分组</string>
     <string name="newface_update_info">Newface 更新在此仓库的 Actions 页面构建。原版 v2rayNG APK 无法更新此应用。</string>
     <string name="newface_update_open">打开 Newface 构建</string>
+    <string name="scoped_test">测试</string>
+    <string name="scoped_test_options">更多测试选项</string>
+    <string name="scoped_test_real">真实延迟（通过代理）</string>
+    <string name="scoped_test_tcp">快速检查（仅检查服务器可达性）</string>
+    <string name="scoped_test_top">重新测试最佳配置（真实延迟）</string>
+    <string name="scoped_test_failed">重新测试失败配置（真实延迟）</string>
+    <string name="scoped_test_current">测试当前连接</string>
+    <string name="scoped_test_scope">%1$d 个配置 · 分组：%2$s · 筛选：%3$s</string>
+    <string name="scoped_test_current_scope">当前连接 · 1 个连接</string>
+    <string name="scoped_test_search">搜索已启用</string>
+    <string name="scoped_test_empty">此范围内没有配置</string>
+    <string name="scoped_test_updating">列表仍在更新，请重试。</string>
+    <string name="scoped_test_changed">分组或已确认的配置发生变化，请重新选择测试。</string>
+    <string name="scoped_test_requires_connection">请先连接，再测试当前连接。</string>
+    <string name="scoped_test_no_auto_actions">范围测试不会自动删除或重新排序配置。</string>
 </resources>
