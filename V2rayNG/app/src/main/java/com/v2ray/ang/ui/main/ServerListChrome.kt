@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
@@ -48,7 +47,6 @@ internal fun ServerListChrome(
                 Text(
                     text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -69,12 +67,11 @@ internal fun ServerListChrome(
 @Composable
 private fun TestProgressStrip(stats: TestRunStats, onCancel: () -> Unit) {
     val fraction = if (stats.total > 0) (stats.done.toFloat() / stats.total).coerceIn(0f, 1f) else 0f
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -85,8 +82,8 @@ private fun TestProgressStrip(stats: TestRunStats, onCancel: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .height(3.dp)
+                .clip(RoundedCornerShape(1.5.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Box(
