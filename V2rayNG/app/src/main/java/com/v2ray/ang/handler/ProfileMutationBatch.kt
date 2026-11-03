@@ -1,5 +1,7 @@
 package com.v2ray.ang.handler
 
+import kotlinx.coroutines.CancellationException
+
 /**
  * A transient before/after batch. Values may contain secrets: never persist or log this object.
  * The caller must hold the same cross-process lock used by *all* relevant readers and writers.
@@ -57,6 +59,14 @@ internal fun applyProfileMutationBatch(
             } catch (error: Throwable) {
                 rollbackErrors.add(error)
             }
+        }
+        if (failure is CancellationException) {
+            if (rollbackErrors.isNotEmpty()) {
+                val incomplete = ProfileBatchWriteException(false, rollbackErrors.first())
+                rollbackErrors.drop(1).forEach(incomplete::addSuppressed)
+                failure.addSuppressed(incomplete)
+            }
+            throw failure
         }
         val result = ProfileBatchWriteException(rollbackErrors.isEmpty(), failure)
         rollbackErrors.forEach(result::addSuppressed)

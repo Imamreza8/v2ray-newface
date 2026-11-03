@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlinx.coroutines.CancellationException
 
 class ProfileMutationBatchTest {
 
@@ -100,5 +101,39 @@ class ProfileMutationBatchTest {
         assertEquals("index", access.values[ProfileRecordStore.INDEX to "group"])
         assertFalse(access.values.containsKey(ProfileRecordStore.PROFILE to "a"))
         assertEquals(4, access.writes)
+    }
+    @Test
+    fun cancellationRestoresAttemptedWritesAndRemainsCancellation() {
+        val records = initial.toMutableMap()
+        var count = 0
+        val access = object : ProfileRecordAccess {
+            override fun read(store: ProfileRecordStore, key: String) = records[store to key]
+            override fun write(store: ProfileRecordStore, key: String, value: String?) {
+                count++
+                if (value == null) records.remove(store to key) else records[store to key] = value
+                if (count == 2) throw CancellationException("cancelled")
+            }
+        }
+        assertThrows(CancellationException::class.java) { applyProfileMutationBatch(access, changes()) }
+        assertEquals(initial, records)
+    }
+
+    @Test
+    fun cancellationRetainsAnExplicitIncompleteRollbackSignal() {
+        val records = initial.toMutableMap()
+        var count = 0
+        val access = object : ProfileRecordAccess {
+            override fun read(store: ProfileRecordStore, key: String) = records[store to key]
+            override fun write(store: ProfileRecordStore, key: String, value: String?) {
+                count++
+                if (count == 3) throw IllegalStateException("rollback failed")
+                if (value == null) records.remove(store to key) else records[store to key] = value
+                if (count == 2) throw CancellationException("cancelled")
+            }
+        }
+        val cancelled = assertThrows(CancellationException::class.java) { applyProfileMutationBatch(access, changes()) }
+        val failure = cancelled.suppressed.single() as ProfileBatchWriteException
+        assertFalse(failure.rollbackComplete)
+        assertEquals("index", records[ProfileRecordStore.INDEX to "group"])
     }
 }
