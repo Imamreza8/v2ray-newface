@@ -82,4 +82,6 @@
     <string name="spatial_tools_delete">Delete</string>
     <string name="spatial_choose_group_current">Choose group, current: %1$s</string>
     <string name="spatial_no_matching_groups">No matching groups</string>
+    <string name="newface_update_info">Newface updates are built on this repository’s GitHub Actions page. Upstream v2rayNG APKs cannot update this app.</string>
+    <string name="newface_update_open">Open Newface builds</string>
 </resources>

@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">حذف</string>
     <string name="spatial_choose_group_current">انتخاب گروه، گروه فعلی: %1$s</string>
     <string name="spatial_no_matching_groups">گروهی پیدا نشد</string>
+    <string name="newface_update_info">به‌روزرسانی‌های Newface در بخش Actions همین مخزن ساخته می‌شوند. فایل‌های v2rayNG اصلی این برنامه را به‌روزرسانی نمی‌کنند.</string>
+    <string name="newface_update_open">باز کردن ساخت‌های Newface</string>
 </resources>

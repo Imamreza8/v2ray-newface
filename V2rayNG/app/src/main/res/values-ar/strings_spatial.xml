@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">الحذف</string>
     <string name="spatial_choose_group_current">اختيار المجموعة، الحالية: %1$s</string>
     <string name="spatial_no_matching_groups">لا توجد مجموعات مطابقة</string>
+    <string name="newface_update_info">تُبنى تحديثات Newface في صفحة Actions لهذا المستودع. لا تحدّث ملفات v2rayNG الأصلية هذا التطبيق.</string>
+    <string name="newface_update_open">فتح إصدارات Newface</string>
 </resources>

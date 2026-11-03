@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
@@ -39,7 +40,7 @@ class CheckUpdateActivity : BaseComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null && !usesNewfaceUpdates(BuildConfig.FLAVOR)) {
             viewModel.checkForUpdates()
         }
     }
@@ -81,17 +82,31 @@ fun CheckUpdateScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsSwitchItem(
-                icon = painterResource(R.drawable.ic_source_code_24dp),
-                title = stringResource(R.string.update_check_pre_release),
-                checked = checkPreRelease,
-                onCheckedChange = { viewModel.toggleCheckPreRelease(it) }
-            )
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.ic_check_update_24dp),
-                title = stringResource(R.string.update_check_for_update),
-                onClick = { viewModel.checkForUpdates() }
-            )
+            if (usesNewfaceUpdates(BuildConfig.FLAVOR)) {
+                Text(
+                    text = stringResource(R.string.newface_update_info),
+                    modifier = Modifier.padding(16.dp),
+                )
+                SettingsMenuItem(
+                    icon = painterResource(R.drawable.ic_check_update_24dp),
+                    title = stringResource(R.string.newface_update_open),
+                    onClick = {
+                        Utils.openUri(context, "https://github.com/Imamreza8/v2ray-newface/actions/workflows/build-spatial-apk.yml")
+                    }
+                )
+            } else {
+                SettingsSwitchItem(
+                    icon = painterResource(R.drawable.ic_source_code_24dp),
+                    title = stringResource(R.string.update_check_pre_release),
+                    checked = checkPreRelease,
+                    onCheckedChange = { viewModel.toggleCheckPreRelease(it) }
+                )
+                SettingsMenuItem(
+                    icon = painterResource(R.drawable.ic_check_update_24dp),
+                    title = stringResource(R.string.update_check_for_update),
+                    onClick = { viewModel.checkForUpdates() }
+                )
+            }
             VersionInfoBlock(versionText = versionText)
             NavigationBarsSpacer()
         }

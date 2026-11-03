@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">Silmə</string>
     <string name="spatial_choose_group_current">Qrupu seçin, cari: %1$s</string>
     <string name="spatial_no_matching_groups">Uyğun qrup tapılmadı</string>
+    <string name="newface_update_info">Newface yeniləmələri bu deponun Actions səhifəsində hazırlanır. Orijinal v2rayNG faylları bu proqramı yeniləmir.</string>
+    <string name="newface_update_open">Newface quruluşlarını aç</string>
 </resources>

@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">Xóa</string>
     <string name="spatial_choose_group_current">Chọn nhóm, hiện tại: %1$s</string>
     <string name="spatial_no_matching_groups">Không có nhóm phù hợp</string>
+    <string name="newface_update_info">Bản cập nhật Newface được tạo trên trang Actions của kho này. APK v2rayNG gốc không thể cập nhật ứng dụng này.</string>
+    <string name="newface_update_open">Mở bản dựng Newface</string>
 </resources>

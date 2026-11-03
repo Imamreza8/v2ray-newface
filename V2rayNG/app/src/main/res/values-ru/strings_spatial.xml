@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">Удаление</string>
     <string name="spatial_choose_group_current">Выбрать группу, текущая: %1$s</string>
     <string name="spatial_no_matching_groups">Нет подходящих групп</string>
+    <string name="newface_update_info">Обновления Newface собираются на странице Actions этого репозитория. APK оригинального v2rayNG не обновит это приложение.</string>
+    <string name="newface_update_open">Открыть сборки Newface</string>
 </resources>

@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">刪除</string>
     <string name="spatial_choose_group_current">選擇群組，目前：%1$s</string>
     <string name="spatial_no_matching_groups">沒有相符的群組</string>
+    <string name="newface_update_info">Newface 更新在此儲存庫的 Actions 頁面建置。原版 v2rayNG APK 無法更新此應用程式。</string>
+    <string name="newface_update_open">開啟 Newface 建置</string>
 </resources>

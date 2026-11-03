@@ -59,6 +59,11 @@ android {
             dimension = "distribution"
             buildConfigField("String", "DISTRIBUTION", "\"Play Store\"")
         }
+        create("newface") {
+            dimension = "distribution"
+            applicationIdSuffix = ".newface"
+            buildConfigField("String", "DISTRIBUTION", "\"Newface\"")
+        }
     }
 
     sourceSets {
@@ -82,7 +87,20 @@ android {
     applicationVariants.all {
         val variant = this
         val isFdroid = variant.productFlavors.any { it.name == "fdroid" }
-        if (isFdroid) {
+        val isNewface = variant.productFlavors.any { it.name == "newface" }
+        if (isNewface) {
+            val suppliedCode = project.findProperty("NEWFACE_VERSION_CODE") as? String
+            val buildNumber = if (suppliedCode == null) 1 else requireNotNull(suppliedCode.toIntOrNull()) {
+                "NEWFACE_VERSION_CODE must be an integer"
+            }
+            require(buildNumber in 1..2_100_000_000) { "Invalid NEWFACE_VERSION_CODE" }
+            variant.outputs.map { it as com.android.build.gradle.internal.api.ApkVariantOutputImpl }
+                .forEach { output ->
+                    val abi = output.getFilter("ABI") ?: "universal"
+                    output.outputFileName = "v2ray-newface_${variant.versionName}_${abi}.apk"
+                    output.versionCodeOverride = buildNumber
+                }
+        } else if (isFdroid) {
             val versionCodes =
                 mapOf(
                     "armeabi-v7a" to 2, "arm64-v8a" to 1, "x86" to 4, "x86_64" to 3, "universal" to 0

@@ -81,4 +81,6 @@
     <string name="spatial_tools_delete">删除</string>
     <string name="spatial_choose_group_current">选择分组，当前：%1$s</string>
     <string name="spatial_no_matching_groups">没有匹配的分组</string>
+    <string name="newface_update_info">Newface 更新在此仓库的 Actions 页面构建。原版 v2rayNG APK 无法更新此应用。</string>
+    <string name="newface_update_open">打开 Newface 构建</string>
 </resources>
