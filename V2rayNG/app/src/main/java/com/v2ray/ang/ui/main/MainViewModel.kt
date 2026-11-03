@@ -374,6 +374,7 @@ class MainViewModel(
             MainAction.DismissExport -> _uiState.update { it.copy(exportProposal = null) }
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.SelectServer -> updateSelectedGuid(action.guid)
+            is MainAction.MoveServer -> moveServer(action.groupId, action.fromGuid, action.toGuid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
@@ -984,7 +985,7 @@ class MainViewModel(
                     dataSource.reorderServerListIfUnchanged(proposal.groupId, proposal.expected, proposal.proposed)
                 }
                 if (!saved) {
-                    toast(R.string.scoped_test_changed)
+                    toast(R.string.save_order_changed)
                     return@launch
                 }
                 withContext(ioDispatcher) { cacheMutex.withLock { groupDataCache.clear() } }
@@ -1130,26 +1131,55 @@ class MainViewModel(
         }
     }
 
-    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
-        if (uiState.value.isTesting || uiState.value.displaySort != ServerDisplaySort.DEFAULT ||
-            groupId.isEmpty() || hasActiveServerFilter(keywordFilter, statusFilter)
+    private fun moveServer(groupId: String, fromGuid: String, toGuid: String) {
+        val ui = uiState.value
+        if (ui.isTesting || isLoading.value || ui.selectedGroupId != groupId ||
+            ui.displaySort != ServerDisplaySort.DEFAULT || groupId.isEmpty() ||
+            hasActiveServerFilter(keywordFilter, statusFilter)
         ) return
         val groupState = mutableServerGroupState(groupId).value
         if (groupState.appliedSort != ServerDisplaySort.DEFAULT ||
-            !scopedListReady(groupState, keywordFilter, statusFilter)
+            !scopedListReady(groupState, keywordFilter, statusFilter) ||
+            groupState.totalCount != groupState.servers.size
         ) return
+        val expected = groupState.servers.map { it.guid }
+        val positions = serverMovePositions(expected, groupState.rows.map { it.guid }, fromGuid, toGuid) ?: return
         val servers = groupState.servers.toMutableList()
-        if (!servers.moveItem(fromPosition, toPosition)) return
+        if (!servers.moveItem(positions.first, positions.second)) return
         val rows = groupState.rows.toMutableList()
-        rows.moveItem(fromPosition, toPosition)
-        val guids = servers.map { it.guid }
+        if (!rows.moveItem(positions.first, positions.second)) return
+        val proposed = servers.map { it.guid }
         mutableServerGroupState(groupId).value = groupState.copy(servers = servers, rows = rows, keywordServers = servers, keywordRows = rows)
-        // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
+        // Serialize gesture updates and compare against the precise previous order. A concurrent
+        // import, delete, sort, or failed prior gesture must not be overwritten by a stale list.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
-        serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
+        serverOrderPersistenceJobs[groupId] = viewModelScope.launch {
             previousPersistenceJob?.join()
-            dataSource.encodeServerList(guids, groupId)
-            cacheMutex.withLock { groupDataCache[groupId] = servers }
+            try {
+                val saved = withContext(ioDispatcher) {
+                    val changed = dataSource.reorderServerListIfUnchanged(groupId, expected, proposed)
+                    if (changed) cacheMutex.withLock {
+                        val cached = groupDataCache[groupId]
+                        if (cached != null && cached.map { it.guid } == expected) {
+                            val byGuid = cached.associateBy { it.guid }
+                            groupDataCache[groupId] = proposed.mapNotNull(byGuid::get)
+                        } else {
+                            groupDataCache.remove(groupId)
+                        }
+                    }
+                    changed
+                }
+                if (!saved) {
+                    toast(R.string.save_order_changed)
+                    setupGroupTab(forceRefresh = true)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to move server in group $groupId", error)
+                toastError(R.string.toast_failure)
+                setupGroupTab(forceRefresh = true)
+            }
         }
     }
 

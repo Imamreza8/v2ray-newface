@@ -130,4 +130,5 @@
     <string name="export_scope_visible">Visible filter (%1$d configs)</string>
     <string name="export_scope_selected">Selected config (%1$d)</string>
     <string name="export_scope_changed">The group or confirmed configs changed. Choose the export scope again.</string>
+    <string name="save_order_changed">The group order changed. Please try again.</string>
 </resources>

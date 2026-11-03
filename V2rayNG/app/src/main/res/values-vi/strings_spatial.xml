@@ -129,4 +129,5 @@
     <string name="export_scope_visible">Bộ lọc đang thấy (%1$d cấu hình)</string>
     <string name="export_scope_selected">Cấu hình đã chọn (%1$d)</string>
     <string name="export_scope_changed">Nhóm hoặc cấu hình đã xác nhận đã thay đổi. Hãy chọn lại phạm vi xuất.</string>
+    <string name="save_order_changed">Thứ tự nhóm đã thay đổi. Vui lòng thử lại.</string>
 </resources>

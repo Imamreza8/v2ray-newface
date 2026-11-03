@@ -129,4 +129,5 @@
     <string name="export_scope_visible">目前篩選（%1$d 個設定）</string>
     <string name="export_scope_selected">選取的設定（%1$d）</string>
     <string name="export_scope_changed">群組或已確認的設定已變更，請重新選擇匯出範圍。</string>
+    <string name="save_order_changed">群組順序已變更，請重試。</string>
 </resources>

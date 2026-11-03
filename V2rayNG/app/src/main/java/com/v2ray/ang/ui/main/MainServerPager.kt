@@ -77,7 +77,7 @@ fun GroupPagerPage(
     selectedGuid: String?,
     locateTarget: LocateTarget?,
     doubleColumnDisplay: Boolean,
-    searchQuery: String,
+    manualReorderAllowed: Boolean,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
     onSelectServer: (String) -> Unit,
@@ -100,7 +100,7 @@ fun GroupPagerPage(
             nowMillis = System.currentTimeMillis()
         }
     }
-    val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
+    val canReorder = groupId.isNotEmpty() && manualReorderAllowed
     val actions = remember(
         onSelectServer,
         onEditServer,
@@ -128,8 +128,8 @@ fun GroupPagerPage(
         lazyGridStates = lazyGridStates,
         actions = actions,
         onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
-        onMoveServer = { fromIndex, toIndex ->
-            mainViewModel.moveServer(groupId, fromIndex, toIndex)
+        onMoveServer = { fromGuid, toGuid ->
+            mainViewModel.onAction(MainAction.MoveServer(groupId, fromGuid, toGuid))
         },
         contentPadding = contentPadding,
     )
@@ -156,7 +156,7 @@ private fun ServerListPage(
     lazyGridStates: MutableMap<String, LazyGridState>,
     actions: ServerRowActions,
     onLocateHandled: () -> Unit,
-    onMoveServer: (Int, Int) -> Unit,
+    onMoveServer: (String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
     if (doubleColumnDisplay) {
@@ -165,7 +165,9 @@ private fun ServerListPage(
         }
         val reorderableGridState = if (canReorder) {
             rememberReorderableLazyGridState(gridState) { from, to ->
-                onMoveServer(from.index, to.index)
+                val fromGuid = from.key as? String
+                val toGuid = to.key as? String
+                if (fromGuid != null && toGuid != null) onMoveServer(fromGuid, toGuid)
             }
         } else null
 
@@ -210,7 +212,9 @@ private fun ServerListPage(
         }
         val reorderableState = if (canReorder) {
             rememberReorderableLazyListState(listState) { from, to ->
-                onMoveServer(from.index, to.index)
+                val fromGuid = from.key as? String
+                val toGuid = to.key as? String
+                if (fromGuid != null && toGuid != null) onMoveServer(fromGuid, toGuid)
             }
         } else null
 

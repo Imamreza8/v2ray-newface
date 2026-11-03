@@ -129,4 +129,5 @@
     <string name="export_scope_visible">Görünən filtr (%1$d konfiqurasiya)</string>
     <string name="export_scope_selected">Seçilmiş konfiqurasiya (%1$d)</string>
     <string name="export_scope_changed">Qrup və ya təsdiqlənmiş konfiqurasiyalar dəyişdi. İxrac sahəsini yenidən seçin.</string>
+    <string name="save_order_changed">Qrup sırası dəyişdi. Yenidən cəhd edin.</string>
 </resources>
