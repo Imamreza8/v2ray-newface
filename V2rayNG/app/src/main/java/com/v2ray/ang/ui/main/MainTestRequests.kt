@@ -60,3 +60,11 @@ internal fun scopedListReady(
 /** Reject the entire confirmed snapshot rather than silently changing its count. */
 internal fun scopedSnapshotStillExists(guids: List<String>, existing: Set<String>, groupExists: Boolean): Boolean =
     groupExists && guids.isNotEmpty() && guids.all { it in existing }
+
+/** Only expose a count for the currently rendered, matching group/filter/search snapshot. */
+internal fun visibleScopedTestCount(
+    state: ServerGroupUiState,
+    keyword: String,
+    filter: ServerStatusFilter,
+    sort: ServerDisplaySort,
+): Int? = if (scopedListReady(state, keyword, filter) && state.appliedSort == sort) state.servers.size else null

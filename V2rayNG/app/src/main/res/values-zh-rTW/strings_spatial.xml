@@ -131,4 +131,6 @@
     <string name="export_scope_changed">群組或已確認的設定已變更，請重新選擇匯出範圍。</string>
     <string name="save_order_changed">群組順序已變更，請重試。</string>
     <string name="bulk_delete_legacy_warning">警告：對話框開啟時目標可能發生變化，發生錯誤時刪除可能不完整。刪除前請備份資料。</string>
+    <string name="scoped_test_count">測試 · %1$d</string>
+    <string name="export_scope_privacy">匯出的連結可能包含私人憑證，請只與信任的人分享。</string>
 </resources>

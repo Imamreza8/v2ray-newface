@@ -49,6 +49,7 @@ import com.v2ray.ang.R
 @Composable
 internal fun ServerListChrome(
     uiState: MainUiState,
+    visibleTestCount: Int?,
     controlsExpanded: Boolean,
     onToggleControls: () -> Unit,
     onAction: (MainAction) -> Unit,
@@ -97,7 +98,14 @@ internal fun ServerListChrome(
             TextButton(
                 onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
                 enabled = !uiState.isTesting,
-            ) { Text(stringResource(R.string.scoped_test)) }
+            ) {
+                Text(
+                    if (visibleTestCount == null) stringResource(R.string.scoped_test)
+                    else stringResource(R.string.scoped_test_count, visibleTestCount),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             IconButton(onClick = { showTestOptions = true }, enabled = !uiState.isTesting) {
                 Icon(
                     painterResource(R.drawable.ic_expand_more_24dp),

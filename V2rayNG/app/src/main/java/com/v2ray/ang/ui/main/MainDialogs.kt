@@ -140,6 +140,7 @@ internal fun ExportScopeDialog(proposal: ExportProposal, onConfirm: (ExportScope
         text = {
             androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState())) {
                 androidx.compose.material3.Text(stringResource(R.string.export_scope_note))
+                androidx.compose.material3.Text(stringResource(R.string.export_scope_privacy))
                 ExportScope.entries.forEach { item ->
                     val label = when (item) {
                         ExportScope.GROUP -> stringResource(R.string.export_scope_group, proposal.groupName, proposal.groupGuids.size)

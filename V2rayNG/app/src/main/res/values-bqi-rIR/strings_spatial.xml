@@ -131,4 +131,6 @@
     <string name="export_scope_changed">گروه یا کانفیگ‌های تأییدشده تغییر کرده‌اند. دوباره محدوده خروجی را انتخاب کنید.</string>
     <string name="save_order_changed">ترتیب گروه تغییر کرده است. دوباره تلاش کنید.</string>
     <string name="bulk_delete_legacy_warning">هشدار: محدوده ممکن است تا زمان تأیید تغییر کند و خطا می‌تواند حذف را ناقص بگذارد. پیش از حذف از داده‌ها پشتیبان بگیرید.</string>
+    <string name="scoped_test_count">تست · %1$d</string>
+    <string name="export_scope_privacy">لینک‌های خروجی ممکن است شامل اطلاعات محرمانه باشند. آن‌ها را فقط با افراد مورد اعتماد به اشتراک بگذارید.</string>
 </resources>

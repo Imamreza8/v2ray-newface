@@ -16,6 +16,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -298,8 +299,17 @@ fun MainScreen(
                         onShowDetails = { showSubscriptionDetails = it },
                         onAction = onAction,
                     )
+                    // Reset the flow's collected value on group changes; never show the old group's count.
+                    val visibleTestCount = key(uiState.selectedGroupId) {
+                        val selectedGroupFlow = remember(uiState.selectedGroupId) {
+                            mainViewModel.serverGroupState(uiState.selectedGroupId)
+                        }
+                        val selectedGroupState by selectedGroupFlow.collectAsStateWithLifecycle()
+                        visibleScopedTestCount(selectedGroupState, searchQuery, uiState.statusFilter, uiState.displaySort)
+                    }
                     ServerListChrome(
                         uiState = uiState,
+                        visibleTestCount = visibleTestCount,
                         controlsExpanded = controlsExpanded,
                         onToggleControls = { controlsExpanded = !controlsExpanded },
                         onAction = onAction,

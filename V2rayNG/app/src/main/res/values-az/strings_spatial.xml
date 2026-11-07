@@ -131,4 +131,6 @@
     <string name="export_scope_changed">Qrup və ya təsdiqlənmiş konfiqurasiyalar dəyişdi. İxrac sahəsini yenidən seçin.</string>
     <string name="save_order_changed">Qrup sırası dəyişdi. Yenidən cəhd edin.</string>
     <string name="bulk_delete_legacy_warning">Xəbərdarlıq: bu pəncərə açıqkən əhatə dəyişə bilər və xəta silməni yarımçıq qoya bilər. Silməzdən əvvəl məlumatların ehtiyat nüsxəsini yaradın.</string>
+    <string name="scoped_test_count">Yoxla · %1$d</string>
+    <string name="export_scope_privacy">İxrac edilən keçidlər məxfi giriş məlumatları ehtiva edə bilər. Onları yalnız etibarlı şəxslərlə paylaşın.</string>
 </resources>

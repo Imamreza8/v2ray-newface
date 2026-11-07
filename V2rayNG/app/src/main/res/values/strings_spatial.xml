@@ -132,4 +132,6 @@
     <string name="export_scope_changed">The group or confirmed configs changed. Choose the export scope again.</string>
     <string name="save_order_changed">The group order changed. Please try again.</string>
     <string name="bulk_delete_legacy_warning">Warning: targets can change while this dialog is open, and an error may leave deletion incomplete. Back up your data before deleting.</string>
+    <string name="scoped_test_count">Test · %1$d</string>
+    <string name="export_scope_privacy">Exported links may contain private credentials. Share them only with trusted recipients.</string>
 </resources>
