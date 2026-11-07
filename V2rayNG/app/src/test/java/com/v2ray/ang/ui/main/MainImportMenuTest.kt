@@ -40,4 +40,42 @@ class MainImportMenuTest {
         )
         assertEquals(expected, serverMenuActions(isComplexProfile = true, includeManagementActions = true))
     }
+    @Test
+    fun importMenuKeepsEveryExistingActionExactlyOnce() {
+        val quick = quickImportActions()
+        val manual = manualImportActions()
+        assertEquals(3, quick.size)
+        assertEquals(ImportMenuAction.entries.toSet(), (quick + manual).toSet())
+        assertEquals(ImportMenuAction.entries.size, (quick + manual).size)
+        assertEquals(true, manual.all { it.action is MainAction.ImportManually })
+        assertEquals(true, quick.none { it.action is MainAction.ImportManually })
+    }
+
+    @Test
+    fun toolCategoriesKeepAllActionsAndSeparateDeletion() {
+        val categorized = ToolCategory.entries.flatMap { category ->
+            MainMoreMenuAction.entries.filter { toolCategory(it) == category }
+        }
+        assertEquals(MainMoreMenuAction.entries.toSet(), categorized.toSet())
+        assertEquals(MainMoreMenuAction.entries.size, categorized.size)
+        assertEquals(
+            setOf(MainMoreMenuAction.DeleteAll, MainMoreMenuAction.DeleteDuplicate, MainMoreMenuAction.DeleteInvalid),
+            categorized.filter { toolCategory(it) == ToolCategory.DELETE }.toSet(),
+        )
+    }
+
+    @Test
+    fun toolsSheetShowsOperationsOnceAndKeepsDedicatedTestAndLocateOut() {
+        val visible = ToolCategory.entries.flatMap(::visibleToolActions)
+        assertEquals(visible.size, visible.toSet().size)
+        assertEquals(
+            MainMoreMenuAction.entries.toSet() - setOf(MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing, MainMoreMenuAction.LocateSelected),
+            visible.toSet(),
+        )
+        assertEquals(ToolCategory.SUBSCRIPTIONS, toolCategory(MainMoreMenuAction.GroupDetails))
+        assertEquals(ToolCategory.SERVICE, toolCategory(MainMoreMenuAction.RestartService))
+        assertEquals(ToolCategory.EXPORT, toolCategory(MainMoreMenuAction.ExportAll))
+        assertEquals(ToolCategory.ORDER, toolCategory(MainMoreMenuAction.SortByTestResults))
+    }
+
 }

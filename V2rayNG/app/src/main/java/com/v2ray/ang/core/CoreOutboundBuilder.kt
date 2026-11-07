@@ -252,21 +252,18 @@ object CoreOutboundBuilder {
             ipv4Addresses.ifEmpty { listOf(AppConfig.WIREGUARD_LOCAL_ADDRESS_V4) }
         }
 
-        val defaultDns = AppConfig.WIREGUARD_LOCAL_REMOTE_DNS.split(",").map { it.trim() }
-
         val rawDNS = profileItem.remoteDNS
             ?.split(",")
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?.ifEmpty { null }
-            ?: defaultDns
+            ?: listOf(AppConfig.WIREGUARD_LOCAL_REMOTE_DNS)
 
         val remotes = if (MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED) == true) {
             rawDNS
         } else {
-            rawDNS.filter { !it.contains(":") }
-                // falling back to the IPv4 entries of the default list
-                .ifEmpty { defaultDns.filter { !it.contains(":")} }
+            val ipv4Dns = rawDNS.filter { !it.contains(":") }
+            ipv4Dns.ifEmpty { listOf(AppConfig.WIREGUARD_LOCAL_REMOTE_DNS) }
         }
 
         outboundBean?.settings?.let { wireguard ->

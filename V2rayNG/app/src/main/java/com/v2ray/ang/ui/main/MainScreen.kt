@@ -16,6 +16,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,8 +25,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.v2ray.ang.ui.compose.SpatialBackground
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -45,16 +53,33 @@ fun MainScreen(
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
     val displayText = mainViewModel.formatStatus(uiState.status)
+    // The current connection result is independent of bulk-test progress and selected profile delay.
+    val bottomText = mainViewModel.formatStatus(uiState.connectionStatus)
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
+    val topState by mainViewModel.topState.collectAsStateWithLifecycle()
+    var showTopSheet by remember { mutableStateOf(false) }
+    var showFullList by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) { onAction(MainAction.RefreshTop) }
 
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showSubscriptionDetails by rememberSaveable { mutableStateOf(false) }
+    var controlsExpanded by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(uiState.selectedGroupId) { showSubscriptionDetails = false }
+    val listNestedScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                controlsExpanded = controlsExpandedAfterScroll(controlsExpanded, available.x, available.y)
+                return Offset.Zero
+            }
+        }
+    }
     var showDelAllConfirm by remember { mutableStateOf(false) }
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
@@ -122,6 +147,22 @@ fun MainScreen(
         onConfirmRemove = { guid -> showRemoveConfirm = null; onAction(MainAction.RemoveServer(guid)) }
     )
 
+    uiState.exportProposal?.let { proposal ->
+        ExportScopeDialog(
+            proposal = proposal,
+            onConfirm = { onAction(MainAction.ConfirmExport(it)) },
+            onDismiss = { onAction(MainAction.DismissExport) },
+        )
+    }
+
+    uiState.saveOrderProposal?.let { proposal ->
+        SaveOrderDialog(
+            proposal = proposal,
+            onConfirm = { onAction(MainAction.ConfirmSaveOrder) },
+            onDismiss = { onAction(MainAction.DismissSaveOrder) },
+        )
+    }
+
     if (shareTarget != null) {
         val (guid, profile, more) = shareTarget!!
         ShareMethodDialog(
@@ -136,6 +177,25 @@ fun MainScreen(
     if (shareQRCodeBitmap != null) {
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
+    if (showTopSheet) {
+        TopConfigsSheet(
+            topState = topState,
+            selectedGuid = selectedGuid,
+            isTesting = uiState.isTesting,
+            onAction = onAction,
+            onDismiss = { showTopSheet = false },
+        )
+    }
+    uiState.expandProposal?.let { proposal ->
+        ExpandDialog(proposal = proposal, onAction = onAction)
+    }
+    uiState.autoSelectProposal?.let { proposal ->
+        AutoSelectDialog(
+            proposal = proposal,
+            isRunning = isRunning,
+            onAction = onAction,
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -149,7 +209,25 @@ fun MainScreen(
             )
         }
     ) {
+        if (!showFullList) {
+            SpatialHome(
+                uiState = uiState,
+                statusText = displayText,
+                onAction = onAction,
+                onOpenMenu = { scope.launch { drawerState.open() } },
+                onOpenList = { showFullList = true },
+                onOpenTop = {
+                    onAction(MainAction.RefreshTop)
+                    showTopSheet = true
+                },
+            )
+        } else {
+        BackHandler { showFullList = false }
+        Box(modifier = Modifier.fillMaxSize()) {
+        // Same space backdrop as the home screen, so the list screen no longer looks like another app
+        SpatialBackground()
         Scaffold(
+            containerColor = Color.Transparent,
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
                 MainTopBar(
@@ -176,9 +254,10 @@ fun MainScreen(
                             MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
-                            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
-                            MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
-                            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
+                            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.PrepareSaveOrder)
+                            MainMoreMenuAction.GroupDetails -> { controlsExpanded = true; showSubscriptionDetails = true }
+                            MainMoreMenuAction.TestAll -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.TCP))
+                            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL))
                             MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
                         }
                     }
@@ -186,7 +265,8 @@ fun MainScreen(
             },
             bottomBar = {
                 MainBottomBar(
-                    displayText = displayText,
+                    displayText = bottomText,
+                    connectionStatus = uiState.connectionStatus,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
                     onAction = onAction
@@ -194,29 +274,46 @@ fun MainScreen(
             },
             floatingActionButton = {},
         ) { innerPadding ->
-            val layoutDirection = LocalLayoutDirection.current
-
             if (groups.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .nestedScroll(listNestedScroll)
                 ) {
-                    if (groups.size > 1) {
-                        GroupTabBar(
-                            groups = groups,
-                            selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
-                            mainViewModel = mainViewModel,
-                            onTabClick = { targetIndex ->
-                                scope.launch {
-                                    pagerState.navigateToPageOptimized(
-                                        targetPage = targetIndex,
-                                        animateAdjacentPage = true
-                                    )
+                    if (controlsExpanded) GroupSelector(
+                        groups = groups,
+                        selectedGroupId = uiState.selectedGroupId,
+                        mainViewModel = mainViewModel,
+                        onSelectGroup = { groupId ->
+                            scope.launch {
+                                val target = latestGroups.indexOfFirst { it.id == groupId }
+                                if (target >= 0) {
+                                    onAction(MainAction.SelectGroup(groupId))
+                                    pagerState.scrollToPage(target)
                                 }
                             }
-                        )
+                        },
+                        onManageGroups = { onNavigate(MainDestination.Subscriptions) },
+                        showDetails = showSubscriptionDetails,
+                        onShowDetails = { showSubscriptionDetails = it },
+                        onAction = onAction,
+                    )
+                    // Reset the flow's collected value on group changes; never show the old group's count.
+                    val visibleTestCount = key(uiState.selectedGroupId) {
+                        val selectedGroupFlow = remember(uiState.selectedGroupId) {
+                            mainViewModel.serverGroupState(uiState.selectedGroupId)
+                        }
+                        val selectedGroupState by selectedGroupFlow.collectAsStateWithLifecycle()
+                        visibleScopedTestCount(selectedGroupState, searchQuery, uiState.statusFilter, uiState.displaySort)
                     }
+                    ServerListChrome(
+                        uiState = uiState,
+                        visibleTestCount = visibleTestCount,
+                        controlsExpanded = controlsExpanded,
+                        onToggleControls = { controlsExpanded = !controlsExpanded },
+                        onAction = onAction,
+                    )
 
                     HorizontalPager(
                         state = pagerState,
@@ -233,7 +330,9 @@ fun MainScreen(
                             selectedGuid = selectedGuid,
                             locateTarget = uiState.locateTarget,
                             doubleColumnDisplay = doubleColumnDisplay,
-                            searchQuery = searchQuery,
+                            manualReorderAllowed = !isLoading && !uiState.isTesting &&
+                                uiState.displaySort == ServerDisplaySort.DEFAULT &&
+                                !hasActiveServerFilter(searchQuery, uiState.statusFilter),
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
@@ -245,19 +344,18 @@ fun MainScreen(
                                 shareTarget = Triple(guid, profile, true)
                             },
                             onRemoveServer = removeServer,
-                            usageInfo = group.usageInfo,
-                            groupTitle = group.remarks,
-                            onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,
                                 end = 0.dp,
-                                bottom = 80.dp
+                                bottom = 8.dp
                             )
                         )
                     }
                 }
             }
+        }
+        }
         }
     }
 }

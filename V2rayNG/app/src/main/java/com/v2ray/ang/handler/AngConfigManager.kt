@@ -27,8 +27,39 @@ import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.CancellationException
 import okhttp3.Headers
 import java.net.URI
+
+/** Return a link only for supported formats with a nonempty encoded body. */
+internal fun formatShareLink(type: EConfigType, encode: () -> String): String {
+    when (type) {
+        EConfigType.VMESS, EConfigType.SHADOWSOCKS, EConfigType.SOCKS, EConfigType.VLESS,
+        EConfigType.TROJAN, EConfigType.WIREGUARD, EConfigType.HYSTERIA2 -> Unit
+        else -> return ""
+    }
+    val body = encode()
+    return if (body.isBlank()) "" else type.protocolScheme + body
+}
+
+/** Count complete links, and report a failed clipboard write rather than claiming success. */
+internal fun copyShareLinks(
+    guids: List<String>,
+    linkFor: (String) -> String,
+    copy: (String) -> Boolean,
+): Int {
+    val links = StringBuilder()
+    var count = 0
+    guids.forEach { guid ->
+        val link = linkFor(guid)
+        if (link.isNotBlank()) {
+            links.appendLine(link)
+            count++
+        }
+    }
+    if (count == 0) return 0
+    return if (copy(links.toString())) count else -1
+}
 
 object AngConfigManager {
 
@@ -67,7 +98,7 @@ object AngConfigManager {
                 return -1
             }
 
-            Utils.setClipboard(context, conf)
+            if (!Utils.trySetClipboard(context, conf)) return -1
 
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share config to clipboard", e)
@@ -85,19 +116,9 @@ object AngConfigManager {
      */
     fun shareNonCustomConfigsToClipboard(context: Context, serverList: List<String>): Int {
         try {
-            val sb = StringBuilder()
-            for (guid in serverList) {
-                val url = shareConfig(guid)
-                if (TextUtils.isEmpty(url)) {
-                    continue
-                }
-                sb.append(url)
-                sb.appendLine()
+            return copyShareLinks(serverList, ::shareConfig) { content ->
+                Utils.trySetClipboard(context, content)
             }
-            if (sb.count() > 0) {
-                Utils.setClipboard(context, sb.toString())
-            }
-            return sb.lines().count() - 1
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share non-custom configs to clipboard", e)
             return -1
@@ -157,15 +178,17 @@ object AngConfigManager {
         try {
             val config = MmkvManager.decodeServerConfig(guid) ?: return ""
 
-            return config.configType.protocolScheme + when (config.configType) {
-                EConfigType.VMESS -> VmessFmt.toUri(config)
-                EConfigType.SHADOWSOCKS -> ShadowsocksFmt.toUri(config)
-                EConfigType.SOCKS -> SocksFmt.toUri(config)
-                EConfigType.VLESS -> VlessFmt.toUri(config)
-                EConfigType.TROJAN -> TrojanFmt.toUri(config)
-                EConfigType.WIREGUARD -> WireguardFmt.toUri(config)
-                EConfigType.HYSTERIA2 -> Hysteria2Fmt.toUri(config)
-                else -> {}
+            return formatShareLink(config.configType) {
+                when (config.configType) {
+                    EConfigType.VMESS -> VmessFmt.toUri(config)
+                    EConfigType.SHADOWSOCKS -> ShadowsocksFmt.toUri(config)
+                    EConfigType.SOCKS -> SocksFmt.toUri(config)
+                    EConfigType.VLESS -> VlessFmt.toUri(config)
+                    EConfigType.TROJAN -> TrojanFmt.toUri(config)
+                    EConfigType.WIREGUARD -> WireguardFmt.toUri(config)
+                    EConfigType.HYSTERIA2 -> Hysteria2Fmt.toUri(config)
+                    else -> ""
+                }
             }
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to share config for GUID: $guid", e)
@@ -579,19 +602,25 @@ object AngConfigManager {
      * @param subId The subscription ID.
      */
     fun sortByTestResultsForSub(subId: String) {
-        val serverList = MmkvManager.decodeServerList(subId)
-        if (serverList.isEmpty()) return
-
-        val sorted = serverList
-            .map { guid ->
-                val delay =
-                    MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L
-                guid to if (delay <= 0L) Long.MAX_VALUE else delay
+        val groupId = subId.ifEmpty { AppConfig.DEFAULT_SUBSCRIPTION_ID }
+        try {
+            val result = saveDelaySortedOrder(
+                expected = MmkvManager.decodeServerList(groupId).toList(),
+                readDelay = { guid -> MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis },
+                compareAndSave = { expected, proposed ->
+                    MmkvManager.reorderServerListIfUnchanged(groupId, expected, proposed)
+                },
+            )
+            if (result == SortedOrderOutcome.STALE) {
+                LogUtil.w(AppConfig.TAG, "Skipped stale automatic server sort for group $groupId")
             }
-            .sortedBy { it.second }
-            .map { it.first }
-            .toMutableList()
-        MmkvManager.encodeServerList(sorted, subId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            // This helper is also called from service worker callbacks: do not strand the worker
+            // on storage failure, and never log profile contents.
+            LogUtil.e(AppConfig.TAG, "Failed to sort servers for group $groupId", error)
+        }
     }
 
     /**

@@ -101,6 +101,44 @@ private val DarkColor = darkColorScheme(
     surfaceContainerHighest = Color(0xFF333234), // Dark Gray
 )
 
+/** Neon "spatial" dark scheme, used instead of the light/dark/dynamic schemes when the switch is on. */
+private val SpatialColor = darkColorScheme(
+    primary = SpatialPalette.Cyan,
+    onPrimary = Color(0xFF002A2E),
+    primaryContainer = Color(0xFF0B2A3A),
+    onPrimaryContainer = Color(0xFFBDF6FF),
+    secondary = SpatialPalette.Purple,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFF2A1745),
+    onSecondaryContainer = Color(0xFFEADCFF),
+    tertiary = SpatialPalette.Emerald,
+    onTertiary = Color(0xFF00382A),
+    tertiaryContainer = Color(0xFF06382C),
+    onTertiaryContainer = Color(0xFFA7F3D0),
+    error = SpatialPalette.Rose,
+    errorContainer = Color(0xFF5C0A1E),
+    onError = Color(0xFFFFFFFF),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = SpatialPalette.SkyTop,
+    onBackground = Color(0xFFE6EAF5),
+    surface = Color(0xFF0B1124),
+    onSurface = Color(0xFFE6EAF5),
+    surfaceVariant = Color(0xFF182038),
+    onSurfaceVariant = Color(0xFFAAB3CC),
+    outline = Color(0xFF4B5675),
+    outlineVariant = Color(0xFF263050),
+    inverseSurface = Color(0xFFE6EAF5),
+    inverseOnSurface = Color(0xFF0B1124),
+    inversePrimary = Color(0xFF006B73),
+    scrim = Color(0xFF000000),
+    surfaceTint = SpatialPalette.Cyan,
+    surfaceContainerLowest = Color(0xFF050810),
+    surfaceContainerLow = Color(0xFF0A0F1E),
+    surfaceContainer = Color(0xFF0F1630),
+    surfaceContainerHigh = Color(0xFF151D3A),
+    surfaceContainerHighest = Color(0xFF1C2546),
+)
+
 // Semantic Colors
 val colorPing = Color(0xFF009966) // Green
 val colorPingRed = Color(0xFFFF0099) // Pink Red
@@ -131,6 +169,18 @@ object ThemeManager {
     )
     val dynamicColorEnabled: StateFlow<Boolean> = _dynamicColorEnabled.asStateFlow()
 
+    /** "" = not chosen yet (treated as on), "1" = on, "0" = off (classic light/dark/dynamic themes). */
+    private val _spatialThemeMode = MutableStateFlow(
+        MmkvManager.decodeSettingsString(AppConfig.PREF_SPATIAL_THEME, "").orEmpty()
+    )
+    val spatialThemeMode: StateFlow<String> = _spatialThemeMode.asStateFlow()
+
+    fun setSpatialThemeEnabled(enabled: Boolean) {
+        val mode = if (enabled) "1" else "0"
+        MmkvManager.encodeSettings(AppConfig.PREF_SPATIAL_THEME, mode)
+        _spatialThemeMode.value = mode
+    }
+
     fun setThemeMode(mode: String) {
         MmkvManager.encodeSettings(AppConfig.PREF_UI_MODE_NIGHT, mode)
         _themeMode.value = mode
@@ -146,6 +196,8 @@ object ThemeManager {
             MmkvManager.decodeSettingsString(AppConfig.PREF_UI_MODE_NIGHT, "0") ?: "0"
         _dynamicColorEnabled.value =
             MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+        _spatialThemeMode.value =
+            MmkvManager.decodeSettingsString(AppConfig.PREF_SPATIAL_THEME, "").orEmpty()
     }
 }
 
@@ -161,14 +213,22 @@ fun resolveDarkTheme(): Boolean {
 
 val LocalDarkTheme = compositionLocalOf { false }
 
+/** True while the neon spatial theme is active (list rows then render as Bento cards). */
+val LocalSpatialTheme = compositionLocalOf { false }
+
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = resolveDarkTheme(),
+    systemDarkTheme: Boolean = resolveDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val dynamicColor by ThemeManager.dynamicColorEnabled.collectAsState()
+    // Older installations may have saved the removed classic theme; always use spatial here.
+    val spatialTheme = true
+    // The neon scheme is always dark, so every dark-dependent component must see darkTheme = true.
+    val darkTheme = systemDarkTheme || spatialTheme
     val context = LocalContext.current
     val colorScheme = when {
+        spatialTheme -> SpatialColor
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
@@ -192,6 +252,7 @@ fun AppTheme(
 
     CompositionLocalProvider(
         LocalDarkTheme provides darkTheme,
+        LocalSpatialTheme provides spatialTheme,
         LocalAppSnackbar provides snackbarController
     ) {
         MaterialTheme(

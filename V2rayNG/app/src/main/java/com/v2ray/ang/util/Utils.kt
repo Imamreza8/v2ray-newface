@@ -65,12 +65,19 @@ object Utils {
      * @param content The text to set to the clipboard.
      */
     fun setClipboard(context: Context, content: String) {
-        try {
+        trySetClipboard(context, content)
+    }
+
+    /** Returns false when the clipboard write failed; never log clipboard contents. */
+    fun trySetClipboard(context: Context, content: String): Boolean {
+        return try {
             val cmb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText(null, content)
             cmb.setPrimaryClip(clipData)
+            true
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to set clipboard content", e)
+            false
         }
     }
 

@@ -69,6 +69,28 @@ internal object ProfileReplacement {
         }
     }
 
+    /**
+     * Maps new GUID -> old GUID for replacements that keep the same connection identity
+     * ([ProfileItem.duplicateIdentity] ignores remarks, description, group and timestamps).
+     * Each old profile is used at most once; the first match in order wins.
+     */
+    fun findHistoryCarryOver(
+        oldProfiles: Map<String, ProfileItem>,
+        newProfiles: Map<String, ProfileItem>,
+    ): Map<String, String> {
+        val oldByIdentity = HashMap<ProfileItem, ArrayDeque<String>>()
+        oldProfiles.forEach { (guid, profile) ->
+            if (guid in newProfiles) return@forEach // same GUID: nothing to copy
+            oldByIdentity.getOrPut(profile.duplicateIdentity()) { ArrayDeque() }.addLast(guid)
+        }
+        val result = LinkedHashMap<String, String>()
+        newProfiles.forEach { (guid, profile) ->
+            val oldGuid = oldByIdentity[profile.duplicateIdentity()]?.removeFirstOrNull() ?: return@forEach
+            result[guid] = oldGuid
+        }
+        return result
+    }
+
     private fun isSameText(left: String?, right: String?): Boolean {
         if (left.isNullOrBlank() || right.isNullOrBlank()) return false
         return left.trim().equals(right.trim(), ignoreCase = true)

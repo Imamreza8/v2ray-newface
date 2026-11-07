@@ -308,4 +308,43 @@ object HttpUtil {
             false
         }
     }
+
+    /**
+     * Downloads at most [maxBytes] from [request].url through the local HTTP proxy and reports how many
+     * bytes arrived and how long it took. Stops after [maxMillis]. Returns null on any failure.
+     * Blocking: call from a background dispatcher. Does not log the URL's query or any credentials.
+     */
+    fun measureDownload(request: UrlContentRequest, maxBytes: Long, maxMillis: Long): Pair<Long, Long>? {
+        val url = request.url ?: return null
+        val client = buildOkHttpClient(request.timeout, request.httpPort, request.proxyUsername, request.proxyPassword, followRedirects = true)
+        val requestBuilder = Request.Builder().url(url).get().header("Connection", "close")
+        if (request.httpPort != 0 && !request.proxyUsername.isNullOrBlank() && !request.proxyPassword.isNullOrBlank()) {
+            requestBuilder.header("Proxy-Authorization", Credentials.basic(request.proxyUsername, request.proxyPassword))
+        }
+        return try {
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                if (!response.isSuccessful) {
+                    LogUtil.w(AppConfig.TAG, "Download measurement failed, code=${response.code}")
+                    return null
+                }
+                val body = response.body ?: return null
+                val buffer = ByteArray(16 * 1024)
+                var total = 0L
+                val startNanos = System.nanoTime()
+                body.byteStream().use { input ->
+                    while (total < maxBytes) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        if ((System.nanoTime() - startNanos) / 1_000_000L > maxMillis) break
+                    }
+                }
+                val elapsedMillis = ((System.nanoTime() - startNanos) / 1_000_000L).coerceAtLeast(1L)
+                total to elapsedMillis
+            }
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Download measurement failed", e)
+            null
+        }
+    }
 }

@@ -1,6 +1,6 @@
 diff --git a/.github/workflows/build-debug.yml b/.github/workflows/build-debug.yml
 new file mode 100644
-index 0000000..c6298ae
+index 0000000..ec27453
 --- /dev/null
 +++ b/.github/workflows/build-debug.yml
 @@ -0,0 +1,80 @@
@@ -14,7 +14,7 @@ index 0000000..c6298ae
 +
 +jobs:
 +  build:
-+    runs-on: ubuntu-24.04
++    runs-on: ubuntu-latest
 +    steps:
 +    - name: Checkout code
 +      uses: actions/checkout@v7
@@ -84,111 +84,9 @@ index 0000000..c6298ae
 +      with:
 +        name: debug-apks
 +        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/debug/*.apk
-diff --git a/.github/workflows/build-spatial-apk.yml b/.github/workflows/build-spatial-apk.yml
-new file mode 100644
-index 0000000..bc967a4
---- /dev/null
-+++ b/.github/workflows/build-spatial-apk.yml
-@@ -0,0 +1,96 @@
-+# Beginner workflow: builds an APK of v2rayNG 2.3.14 + the spatial/top-configs patch, entirely on GitHub.
-+# Put this file in your fork as .github/workflows/build-spatial-apk.yml and upload
-+# v2rayNG-2.3.14-spatial-top.patch to the ROOT of the same fork. Then: Actions -> Build spatial APK -> Run workflow.
-+name: Build spatial APK
-+
-+on:
-+  workflow_dispatch:
-+
-+jobs:
-+  build:
-+    runs-on: ubuntu-24.04
-+    steps:
-+    - name: Checkout upstream v2rayNG 2.3.14 (with submodules)
-+      uses: actions/checkout@v7
-+      with:
-+        repository: 2dust/v2rayNG
-+        ref: 2.3.14
-+        submodules: 'recursive'
-+        fetch-depth: '0'
-+
-+    - name: Checkout your fork (only to read the patch file)
-+      uses: actions/checkout@v7
-+      with:
-+        path: mine
-+
-+    - name: Apply the patch
-+      run: |
-+        test -f mine/v2rayNG-2.3.14-spatial-top.patch || { echo "Patch file not found in the root of your fork"; exit 1; }
-+        git apply --check mine/v2rayNG-2.3.14-spatial-top.patch
-+        git apply mine/v2rayNG-2.3.14-spatial-top.patch
-+        echo "Patch applied"
-+
-+    - name: Setup Android SDK
-+      uses: android-actions/setup-android@v4
-+      with:
-+        log-accepted-android-sdk-licenses: false
-+        cmdline-tools-version: '14742923'
-+        packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
-+
-+    - name: Install NDK
-+      run: |
-+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-+          --channel=0 \
-+          --install "ndk;30.0.16248370"
-+        echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> $GITHUB_ENV
-+        sed -i '10i\
-+        \
-+            ndkVersion = "30.0.16248370"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
-+
-+    - name: Build libhevtun
-+      run: bash compile-hevtun.sh
-+
-+    - name: Copy libhevtun
-+      run: cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
-+
-+    - name: Fetch AndroidLibXrayLite tag
-+      run: |
-+        pushd AndroidLibXrayLite
-+        CURRENT_TAG=$(git describe --tags --abbrev=0)
-+        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
-+        popd
-+
-+    - name: Download libv2ray
-+      uses: robinraju/release-downloader@v1.13
-+      with:
-+        repository: '2dust/AndroidLibXrayLite'
-+        tag: ${{ env.CURRENT_TAG }}
-+        fileName: 'libv2ray.aar'
-+        out-file-path: V2rayNG/app/libs/
-+
-+    - name: Setup Java
-+      uses: actions/setup-java@v6.1.0
-+      with:
-+        distribution: 'temurin'
-+        java-version: '21'
-+
-+    - name: Unit tests (failures here do not stop the APK)
-+      continue-on-error: true
-+      run: |
-+        cd ${{ github.workspace }}/V2rayNG
-+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
-+        chmod 755 gradlew
-+        ./gradlew :app:testFdroidDebugUnitTest
-+
-+    - name: Build APK (fdroid debug, installs next to the official app)
-+      run: |
-+        cd ${{ github.workspace }}/V2rayNG
-+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
-+        chmod 755 gradlew
-+        ./gradlew :app:assembleFdroidDebug
-+
-+    - name: Upload APKs
-+      uses: actions/upload-artifact@v7
-+      with:
-+        name: spatial-apk
-+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
 diff --git a/.github/workflows/ci-tests.yml b/.github/workflows/ci-tests.yml
 new file mode 100644
-index 0000000..b75b941
+index 0000000..50c12c5
 --- /dev/null
 +++ b/.github/workflows/ci-tests.yml
 @@ -0,0 +1,83 @@
@@ -203,7 +101,7 @@ index 0000000..b75b941
 +
 +jobs:
 +  build:
-+    runs-on: ubuntu-24.04
++    runs-on: ubuntu-latest
 +    steps:
 +    - name: Checkout code
 +      uses: actions/checkout@v7
@@ -305,12 +203,11 @@ index eead823..81858bd 100644
      const val MSG_SUB_UPDATE_START = 8
      const val MSG_SUB_UPDATE_CANCEL = 81
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt
-index 633e365..8046e1a 100644
+index 633e365..edf1aee 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt
 +++ b/V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt
-@@ -71,6 +71,12 @@ object CoreServiceManager {
-             }
-         }
+@@ -61,6 +61,12 @@ object CoreServiceManager {
+     private var currentVpnInterface: ParcelFileDescriptor? = null
  
 +    /** Number of UI clients that registered (and did not unregister); speed updates are sent only if > 0. */
 +    @Volatile
@@ -318,9 +215,10 @@ index 633e365..8046e1a 100644
 +
 +    fun hasUiClient(): Boolean = uiClientCount > 0
 +
-     /**
-      * Checks if the V2Ray service is running.
-      * @return True if the service is running, false otherwise.
+     var serviceControl: SoftReference<ServiceControl>? = null
+         set(value) {
+             field = value
+             val service = value?.get()?.getService()
 @@ -461,6 +467,7 @@ object CoreServiceManager {
              val serviceControl = serviceControl?.get() ?: return
              when (intent?.getIntExtra("key", 0)) {
@@ -808,7 +706,7 @@ index 3ba2e72..0c255ae 100644
                      this,
                      AppConfig.MSG_MEASURE_CONFIG_SUCCESS,
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/compose/Theme.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/compose/Theme.kt
-index 64ee899..a49651f 100644
+index 64ee899..bebda4d 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/compose/Theme.kt
 +++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/compose/Theme.kt
 @@ -101,6 +101,44 @@ private val DarkColor = darkColorScheme(
@@ -860,7 +758,7 @@ index 64ee899..a49651f 100644
      )
      val dynamicColorEnabled: StateFlow<Boolean> = _dynamicColorEnabled.asStateFlow()
  
-+    /** "" = not chosen yet (treated as on), "1" = on, "0" = off (classic light/dark/dynamic themes). */
++    /** "" = automatic (neon only while the system is in dark mode), "1" = always on, "0" = always off. */
 +    private val _spatialThemeMode = MutableStateFlow(
 +        MmkvManager.decodeSettingsString(AppConfig.PREF_SPATIAL_THEME, "").orEmpty()
 +    )
@@ -884,7 +782,7 @@ index 64ee899..a49651f 100644
      }
  }
  
-@@ -161,14 +213,27 @@ fun resolveDarkTheme(): Boolean {
+@@ -161,14 +213,26 @@ fun resolveDarkTheme(): Boolean {
  
  val LocalDarkTheme = compositionLocalOf { false }
  
@@ -902,8 +800,7 @@ index 64ee899..a49651f 100644
 +    val spatialTheme = when (spatialMode) {
 +        "1" -> true
 +        "0" -> false
-+        // Not chosen yet: the spatial home is the app's look, so it is on by default (even in light mode).
-+        else -> true
++        else -> systemDarkTheme
 +    }
 +    // The neon scheme is always dark, so every dark-dependent component must see darkTheme = true.
 +    val darkTheme = systemDarkTheme || spatialTheme
@@ -913,7 +810,7 @@ index 64ee899..a49651f 100644
          dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
              if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
          }
-@@ -192,6 +257,7 @@ fun AppTheme(
+@@ -192,6 +256,7 @@ fun AppTheme(
  
      CompositionLocalProvider(
          LocalDarkTheme provides darkTheme,
@@ -953,7 +850,7 @@ index 29b922a..cdc50ec 100644
          val selected = mainViewModel.uiState.value.selectedGuid
          if (guid != selected) {
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainContract.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainContract.kt
-index 60cf607..06e21d6 100644
+index 60cf607..7e44577 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainContract.kt
 +++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainContract.kt
 @@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
@@ -964,7 +861,7 @@ index 60cf607..06e21d6 100644
  
  /** Locale-neutral state formatted only when it reaches the main UI. */
  sealed interface MainStatus {
-@@ -13,6 +14,57 @@ sealed interface MainStatus {
+@@ -13,6 +14,55 @@ sealed interface MainStatus {
      data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
  }
  
@@ -984,8 +881,6 @@ index 60cf607..06e21d6 100644
 +data class SelectedServerInfo(
 +    val remarks: String,
 +    val delayMillis: Long,
-+    /** Two-letter exit country learned from a connection test, or null. */
-+    val exitCountry: String? = null,
 +)
 +
 +/** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
@@ -1022,7 +917,7 @@ index 60cf607..06e21d6 100644
  /**
   * Main UI state
   */
-@@ -26,7 +78,22 @@ data class MainUiState(
+@@ -26,7 +76,22 @@ data class MainUiState(
      val locateTarget: LocateTarget? = null,
      val confirmRemove: Boolean = false,
      val doubleColumnDisplay: Boolean = false,
@@ -1046,7 +941,7 @@ index 60cf607..06e21d6 100644
  )
  
  /**
-@@ -69,4 +136,27 @@ sealed interface MainAction {
+@@ -69,4 +134,27 @@ sealed interface MainAction {
      data class ImportBatchConfig(val configText: String) : MainAction
  
      data object LocateHandled : MainAction
@@ -1097,14 +992,12 @@ index fa37a47..4b4e8ee 100644
                  else -> null
              }
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainScreen.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainScreen.kt
-index f29539d..8f5bd60 100644
+index f29539d..230377c 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainScreen.kt
 +++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainScreen.kt
-@@ -24,12 +24,18 @@ import androidx.compose.runtime.rememberUpdatedState
- import androidx.compose.runtime.saveable.rememberSaveable
+@@ -25,6 +25,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
  import androidx.compose.runtime.setValue
  import androidx.compose.runtime.snapshotFlow
-+import androidx.activity.compose.BackHandler
  import androidx.compose.ui.Modifier
 +import androidx.compose.ui.geometry.Offset
 +import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -1113,22 +1006,12 @@ index f29539d..8f5bd60 100644
  import androidx.compose.ui.platform.LocalLayoutDirection
  import androidx.compose.ui.unit.dp
  import androidx.lifecycle.compose.collectAsStateWithLifecycle
- import com.v2ray.ang.dto.entities.ProfileItem
- import com.v2ray.ang.ui.compose.LocalDarkTheme
-+import com.v2ray.ang.ui.compose.LocalSpatialTheme
- import com.v2ray.ang.ui.compose.QRCodeDialog
- import kotlinx.coroutines.flow.distinctUntilChanged
- import kotlinx.coroutines.launch
-@@ -49,6 +55,34 @@ fun MainScreen(
+@@ -49,6 +53,30 @@ fun MainScreen(
      val doubleColumnDisplay = uiState.doubleColumnDisplay
      val confirmRemove = uiState.confirmRemove
      val shareQRCodeBitmap = uiState.shareQRCodeBitmap
 +    val topState by mainViewModel.topState.collectAsStateWithLifecycle()
 +    var showTopSheet by remember { mutableStateOf(false) }
-+    // With the neon theme the app opens on the spatial home; the full config list (the classic screen)
-+    // opens from the location card and closes with Back.
-+    val homeMode = LocalSpatialTheme.current
-+    var showFullList by rememberSaveable { mutableStateOf(false) }
 +    // The header folds away while the list is scrolled down and returns when scrolling back up (visual only).
 +    var headerCollapsedByScroll by remember { mutableStateOf(false) }
 +    val headerScrollConnection = remember {
@@ -1154,7 +1037,7 @@ index f29539d..8f5bd60 100644
  
      val isDarkTheme = LocalDarkTheme.current
      val drawerState = rememberDrawerState(DrawerValue.Closed)
-@@ -136,6 +170,25 @@ fun MainScreen(
+@@ -136,6 +164,25 @@ fun MainScreen(
      if (shareQRCodeBitmap != null) {
          QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
      }
@@ -1180,33 +1063,12 @@ index f29539d..8f5bd60 100644
  
      ModalNavigationDrawer(
          drawerState = drawerState,
-@@ -149,6 +202,20 @@ fun MainScreen(
-             )
-         }
-     ) {
-+        if (homeMode && !showFullList) {
-+            SpatialHome(
-+                uiState = uiState,
-+                statusText = displayText,
-+                onAction = onAction,
-+                onOpenMenu = { scope.launch { drawerState.open() } },
-+                onOpenList = { showFullList = true },
-+                onOpenTop = {
-+                    onAction(MainAction.RefreshTop)
-+                    showTopSheet = true
-+                },
-+            )
-+        } else {
-+        if (homeMode) BackHandler { showFullList = false }
-         Scaffold(
-             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
-             topBar = {
-@@ -202,7 +269,19 @@ fun MainScreen(
+@@ -202,7 +249,19 @@ fun MainScreen(
                          .fillMaxSize()
                          .padding(innerPadding)
                  ) {
 -                    if (groups.size > 1) {
-+                    if (!homeMode) SpatialHeader(
++                    SpatialHeader(
 +                        uiState = uiState,
 +                        statusText = displayText,
 +                        topCount = topState.entries.size,
@@ -1222,7 +1084,7 @@ index f29539d..8f5bd60 100644
                          GroupTabBar(
                              groups = groups,
                              selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
-@@ -218,9 +297,9 @@ fun MainScreen(
+@@ -218,9 +277,9 @@ fun MainScreen(
                          )
                      }
  
@@ -1234,11 +1096,8 @@ index f29539d..8f5bd60 100644
                          userScrollEnabled = true,
                          beyondViewportPageCount = 1,
                          key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
-@@ -259,5 +338,8 @@ fun MainScreen(
-                 }
-             }
+@@ -261,3 +320,5 @@ fun MainScreen(
          }
-+        }
      }
  }
 +
@@ -1397,7 +1256,7 @@ index f02a8aa..90a5011 100644
 +    data class Traffic(val speed: TrafficSpeed) : MainServiceEvent()
  }
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainViewModel.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainViewModel.kt
-index 18fc820..d0febff 100644
+index 18fc820..40f75dc 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainViewModel.kt
 +++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/MainViewModel.kt
 @@ -18,8 +18,14 @@ import com.v2ray.ang.extension.delay
@@ -1646,7 +1505,7 @@ index 18fc820..d0febff 100644
                  groups.forEach { mutableServerGroupState(it.id) }
  
                  if (groups.isEmpty()) {
-@@ -779,10 +885,33 @@ class MainViewModel(
+@@ -779,10 +885,31 @@ class MainViewModel(
      fun updateSelectedGuid(guid: String) {
          dataSource.setSelectServer(guid)
          _uiState.update { it.copy(selectedGuid = guid) }
@@ -1667,11 +1526,9 @@ index 18fc820..d0febff 100644
 +                null
 +            } else {
 +                dataSource.decodeServerConfig(guid)?.let { profile ->
-+                    val affiliation = dataSource.decodeAffiliationInfo(guid)
 +                    SelectedServerInfo(
 +                        remarks = profile.remarks,
-+                        delayMillis = affiliation?.testDelayMillis ?: 0L,
-+                        exitCountry = TopConfigManager.normalizeCountryCode(affiliation?.exitCountry),
++                        delayMillis = dataSource.decodeAffiliationInfo(guid)?.testDelayMillis ?: 0L,
 +                    )
 +                }
 +            }
@@ -1680,7 +1537,7 @@ index 18fc820..d0febff 100644
      }
  
      fun removeServerAndRefresh(guid: String) {
-@@ -816,6 +945,7 @@ class MainViewModel(
+@@ -816,6 +943,7 @@ class MainViewModel(
  
      // ---------- Testing ----------
      fun cancelAllPing() {
@@ -1688,7 +1545,7 @@ index 18fc820..d0febff 100644
          bulkTestJob?.cancel()
          bulkTestJob = null
          testRequests.cancelBulk()
-@@ -843,18 +973,9 @@ class MainViewModel(
+@@ -843,18 +971,9 @@ class MainViewModel(
              return
          }
          val serverGuids = servers.map { it.guid }
@@ -1710,7 +1567,7 @@ index 18fc820..d0febff 100644
          val request = testRequests.beginBulk(groupId)
          val message = TestServiceMessage(
              key = AppConfig.MSG_MEASURE_CONFIG_START,
-@@ -869,19 +990,254 @@ class MainViewModel(
+@@ -869,19 +988,254 @@ class MainViewModel(
              )
          }
          bulkTestJob = viewModelScope.launch {
@@ -1975,7 +1832,7 @@ index 18fc820..d0febff 100644
          }
      }
  
-@@ -901,6 +1257,14 @@ class MainViewModel(
+@@ -901,6 +1255,14 @@ class MainViewModel(
      private fun onTestsFinished(requestId: String) {
          if (testRequests.completeBulk(requestId) == null) return
          resetTestStatus()
@@ -1990,7 +1847,7 @@ index 18fc820..d0febff 100644
          viewModelScope.launch(ioDispatcher) {
              cacheMutex.withLock { groupDataCache.clear() }
              reloadAllGroups(_uiState.value.groups.map { it.id })
-@@ -936,7 +1300,11 @@ class MainViewModel(
+@@ -936,7 +1298,11 @@ class MainViewModel(
                  isRunning = running,
                  isTesting = testRequests.isTesting,
                  status = if (!clearTestingText && state.isRunning == running) state.status
@@ -2003,7 +1860,7 @@ index 18fc820..d0febff 100644
              )
          }
      }
-@@ -947,6 +1315,7 @@ class MainViewModel(
+@@ -947,6 +1313,7 @@ class MainViewModel(
          selectedGroupLoadJob?.cancel()
          reloadJob?.cancel()
          filterJob?.cancel()
@@ -2011,7 +1868,7 @@ index 18fc820..d0febff 100644
          cancelAllPing()
          dataSource.close()
          super.onCleared()
-@@ -965,5 +1334,19 @@ class MainViewModel(
+@@ -965,5 +1332,19 @@ class MainViewModel(
  
      private companion object {
          const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
@@ -2933,726 +2790,6 @@ index 0000000..67d9d33
 +        },
 +    )
 +}
-diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/SpatialHome.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/SpatialHome.kt
-new file mode 100644
-index 0000000..9703714
---- /dev/null
-+++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/SpatialHome.kt
-@@ -0,0 +1,605 @@
-+package com.v2ray.ang.ui.main
-+
-+import androidx.compose.animation.core.LinearEasing
-+import androidx.compose.animation.core.RepeatMode
-+import androidx.compose.animation.core.animateFloat
-+import androidx.compose.animation.core.infiniteRepeatable
-+import androidx.compose.animation.core.rememberInfiniteTransition
-+import androidx.compose.animation.core.tween
-+import androidx.compose.foundation.BorderStroke
-+import androidx.compose.foundation.Canvas
-+import androidx.compose.foundation.background
-+import androidx.compose.foundation.border
-+import androidx.compose.foundation.clickable
-+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-+import androidx.compose.foundation.layout.Arrangement
-+import androidx.compose.foundation.layout.Box
-+import androidx.compose.foundation.layout.BoxWithConstraints
-+import androidx.compose.foundation.layout.Column
-+import androidx.compose.foundation.layout.ColumnScope
-+import androidx.compose.foundation.layout.Row
-+import androidx.compose.foundation.layout.Spacer
-+import androidx.compose.foundation.layout.fillMaxSize
-+import androidx.compose.foundation.layout.fillMaxWidth
-+import androidx.compose.foundation.layout.height
-+import androidx.compose.foundation.layout.padding
-+import androidx.compose.foundation.layout.size
-+import androidx.compose.foundation.layout.systemBarsPadding
-+import androidx.compose.foundation.layout.width
-+import androidx.compose.foundation.shape.CircleShape
-+import androidx.compose.foundation.shape.RoundedCornerShape
-+import androidx.compose.material3.AlertDialog
-+import androidx.compose.material3.FilterChip
-+import androidx.compose.material3.Surface
-+import androidx.compose.material3.Text
-+import androidx.compose.material3.TextButton
-+import androidx.compose.runtime.Composable
-+import androidx.compose.runtime.getValue
-+import androidx.compose.runtime.mutableFloatStateOf
-+import androidx.compose.runtime.mutableStateOf
-+import androidx.compose.runtime.remember
-+import androidx.compose.runtime.setValue
-+import androidx.compose.ui.Alignment
-+import androidx.compose.ui.Modifier
-+import androidx.compose.ui.draw.clip
-+import androidx.compose.ui.geometry.Offset
-+import androidx.compose.ui.geometry.Size
-+import androidx.compose.ui.graphics.Brush
-+import androidx.compose.ui.graphics.Color
-+import androidx.compose.ui.graphics.Path
-+import androidx.compose.ui.graphics.StrokeCap
-+import androidx.compose.ui.graphics.drawscope.DrawScope
-+import androidx.compose.ui.graphics.drawscope.Stroke
-+import androidx.compose.ui.graphics.drawscope.withTransform
-+import androidx.compose.ui.graphics.lerp
-+import androidx.compose.ui.input.pointer.pointerInput
-+import androidx.compose.ui.res.stringResource
-+import androidx.compose.ui.semantics.Role
-+import androidx.compose.ui.semantics.clearAndSetSemantics
-+import androidx.compose.ui.semantics.contentDescription
-+import androidx.compose.ui.semantics.semantics
-+import androidx.compose.ui.text.font.FontFamily
-+import androidx.compose.ui.text.font.FontWeight
-+import androidx.compose.ui.text.style.TextOverflow
-+import androidx.compose.ui.unit.dp
-+import androidx.compose.ui.unit.sp
-+import com.v2ray.ang.AppConfig
-+import com.v2ray.ang.R
-+import com.v2ray.ang.extension.toSpeedString
-+import com.v2ray.ang.handler.TopConfigManager
-+import com.v2ray.ang.ui.compose.LocalSpatialTheme
-+import java.util.Locale
-+import kotlin.math.PI
-+import kotlin.math.cos
-+import kotlin.math.sin
-+import kotlin.random.Random
-+
-+private val SkyTop = Color(0xFF0A0F2E)
-+private val SkyIndigo = Color(0xFF1B1766)
-+private val SkyPurple = Color(0xFF4B1A73)
-+private val SkyMagenta = Color(0xFFB3235E)
-+private val Cyan = Color(0xFF22D3EE)
-+private val Magenta = Color(0xFFE879F9)
-+private val Emerald = Color(0xFF34D399)
-+private val Amber = Color(0xFFFACC15)
-+private val Pink = Color(0xFFF472B6)
-+private val OceanBlue = Color(0xFF6C7DFF)
-+private val TextSoft = Color(0xB3FFFFFF)
-+
-+private const val HOME_GLOBE_POINTS = 1100
-+private const val STAR_COUNT = 90
-+
-+/**
-+ * Full-screen "3D spatial glassmorphism" home: space background, big dotted globe with neon rings,
-+ * a glass connection card on top and a glass location card with the connect button at the bottom.
-+ * The config list opens from the location card. The globe is decoration only: it does not show the
-+ * server location, and the continents are coarse approximations.
-+ */
-+@Composable
-+internal fun SpatialHome(
-+    uiState: MainUiState,
-+    statusText: String,
-+    onAction: (MainAction) -> Unit,
-+    onOpenMenu: () -> Unit,
-+    onOpenList: () -> Unit,
-+    onOpenTop: () -> Unit,
-+) {
-+    var showSpeedConfirm by remember { mutableStateOf(false) }
-+    val running = uiState.isRunning
-+    val stats = uiState.runStats
-+
-+    Box(modifier = Modifier.fillMaxSize()) {
-+        SpaceBackground()
-+        Column(
-+            modifier = Modifier
-+                .fillMaxSize()
-+                .systemBarsPadding()
-+                .padding(horizontal = 20.dp, vertical = 8.dp),
-+            verticalArrangement = Arrangement.spacedBy(12.dp),
-+        ) {
-+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-+                RoundGlassButton(glyph = "☰", description = stringResource(R.string.spatial_menu), onClick = onOpenMenu)
-+                RoundGlassButton(glyph = "★", description = stringResource(R.string.spatial_top_configs), onClick = onOpenTop)
-+            }
-+
-+            ConnectionCard(uiState = uiState)
-+
-+            BoxWithConstraints(
-+                modifier = Modifier.weight(1f).fillMaxWidth(),
-+                contentAlignment = Alignment.Center,
-+            ) {
-+                val side = if (maxWidth < maxHeight) maxWidth else maxHeight
-+                HomeGlobe(size = side, running = running, reduceMotion = uiState.reduceMotion)
-+            }
-+
-+            // Actions: discovery on the left, test progress replaces them while testing
-+            Row(
-+                modifier = Modifier.fillMaxWidth(),
-+                horizontalArrangement = Arrangement.spacedBy(8.dp),
-+                verticalAlignment = Alignment.CenterVertically,
-+            ) {
-+                if (uiState.isTesting) {
-+                    Text(
-+                        text = if (stats.total > 0) {
-+                            stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed)
-+                        } else {
-+                            statusText
-+                        },
-+                        color = Amber,
-+                        fontSize = 12.sp,
-+                        fontFamily = FontFamily.Monospace,
-+                        maxLines = 2,
-+                        overflow = TextOverflow.Ellipsis,
-+                        modifier = Modifier.weight(1f),
-+                    )
-+                    GlassChip(
-+                        label = stringResource(R.string.action_cancel),
-+                        accent = Pink,
-+                        onClick = { onAction(MainAction.CancelTesting) },
-+                    )
-+                } else {
-+                    GlassChip(
-+                        modifier = Modifier.weight(1f),
-+                        label = stringResource(R.string.spatial_smart_connect),
-+                        accent = Emerald,
-+                        onClick = { onAction(MainAction.SmartConnect) },
-+                    )
-+                    if (uiState.resumableCount > 0) {
-+                        GlassChip(
-+                            label = stringResource(R.string.spatial_resume, uiState.resumableCount),
-+                            accent = Amber,
-+                            onClick = { onAction(MainAction.ResumeTesting) },
-+                        )
-+                    }
-+                    GlassChip(
-+                        label = stringResource(R.string.spatial_speed_test),
-+                        accent = Cyan,
-+                        enabled = running && uiState.speedTest != SpeedTestState.Running,
-+                        onClick = { showSpeedConfirm = true },
-+                    )
-+                }
-+            }
-+
-+            LocationCard(uiState = uiState, onOpenList = onOpenList, onAction = onAction)
-+
-+            Row(
-+                modifier = Modifier.fillMaxWidth(),
-+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-+            ) {
-+                FilterChip(
-+                    selected = uiState.reduceMotion,
-+                    onClick = { onAction(MainAction.SetReduceMotion(!uiState.reduceMotion)) },
-+                    label = { Text(stringResource(R.string.spatial_reduce_motion), fontSize = 11.sp) },
-+                )
-+                FilterChip(
-+                    selected = LocalSpatialTheme.current,
-+                    onClick = { onAction(MainAction.SetSpatialTheme(false)) },
-+                    label = { Text(stringResource(R.string.spatial_neon_theme), fontSize = 11.sp) },
-+                )
-+            }
-+        }
-+    }
-+
-+    if (showSpeedConfirm) {
-+        val host = remember { runCatching { java.net.URI(AppConfig.SPEED_TEST_URL).host }.getOrNull().orEmpty() }
-+        AlertDialog(
-+            onDismissRequest = { showSpeedConfirm = false },
-+            title = { Text(stringResource(R.string.spatial_speed_title)) },
-+            text = { Text(stringResource(R.string.spatial_speed_confirm, host)) },
-+            confirmButton = {
-+                TextButton(onClick = {
-+                    showSpeedConfirm = false
-+                    onAction(MainAction.SpeedTestCurrent)
-+                }) { Text(stringResource(R.string.spatial_speed_start)) }
-+            },
-+            dismissButton = {
-+                TextButton(onClick = { showSpeedConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
-+            },
-+        )
-+    }
-+}
-+
-+// ---------------------------------------------------------------------------------------------
-+// Background
-+// ---------------------------------------------------------------------------------------------
-+
-+@Composable
-+private fun SpaceBackground() {
-+    val stars = remember {
-+        val random = Random(7)
-+        List(STAR_COUNT) {
-+            floatArrayOf(random.nextFloat(), random.nextFloat(), 0.6f + random.nextFloat() * 1.6f, 0.25f + random.nextFloat() * 0.6f)
-+        }
-+    }
-+    Canvas(modifier = Modifier.fillMaxSize()) {
-+        drawRect(Brush.verticalGradient(listOf(SkyTop, SkyIndigo, SkyPurple, SkyMagenta)))
-+        drawCircle(
-+            brush = Brush.radialGradient(
-+                listOf(Cyan.copy(alpha = 0.16f), Color.Transparent),
-+                center = Offset(size.width * 0.15f, size.height * 0.2f),
-+                radius = size.width * 0.8f,
-+            ),
-+            radius = size.width * 0.8f,
-+            center = Offset(size.width * 0.15f, size.height * 0.2f),
-+        )
-+        drawCircle(
-+            brush = Brush.radialGradient(
-+                listOf(Magenta.copy(alpha = 0.18f), Color.Transparent),
-+                center = Offset(size.width * 0.9f, size.height * 0.95f),
-+                radius = size.width * 0.9f,
-+            ),
-+            radius = size.width * 0.9f,
-+            center = Offset(size.width * 0.9f, size.height * 0.95f),
-+        )
-+        stars.forEach { s ->
-+            drawCircle(Color.White.copy(alpha = s[3]), radius = s[2], center = Offset(s[0] * size.width, s[1] * size.height))
-+        }
-+    }
-+}
-+
-+// ---------------------------------------------------------------------------------------------
-+// Cards
-+// ---------------------------------------------------------------------------------------------
-+
-+/** Translucent card with a light border (glass look without a backdrop blur). */
-+@Composable
-+private fun GlassCard(
-+    modifier: Modifier = Modifier,
-+    onClick: (() -> Unit)? = null,
-+    content: @Composable ColumnScope.() -> Unit,
-+) {
-+    val shape = RoundedCornerShape(26.dp)
-+    Column(
-+        modifier = modifier
-+            .clip(shape)
-+            .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.07f))))
-+            .border(
-+                1.dp,
-+                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.10f))),
-+                shape,
-+            )
-+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-+            .padding(18.dp),
-+        content = content,
-+    )
-+}
-+
-+@Composable
-+private fun ConnectionCard(uiState: MainUiState) {
-+    val running = uiState.isRunning
-+    val delay = uiState.selectedInfo?.delayMillis ?: 0L
-+    val pingText = when {
-+        delay > 0L -> stringResource(R.string.server_test_delay_value, delay)
-+        delay < 0L -> stringResource(R.string.spatial_test_failed)
-+        else -> stringResource(R.string.spatial_not_tested)
-+    }
-+    val speedText = when {
-+        running && uiState.speedEnabled -> uiState.trafficDownBps.toSpeedString()
-+        uiState.speedTest is SpeedTestState.Result ->
-+            stringResource(R.string.spatial_speed_mbps, (uiState.speedTest as SpeedTestState.Result).megabitsPerSecond)
-+        else -> stringResource(R.string.spatial_not_tested)
-+    }
-+    GlassCard(modifier = Modifier.fillMaxWidth()) {
-+        Text(stringResource(R.string.spatial_connection), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-+        Spacer(Modifier.height(8.dp))
-+        Row(verticalAlignment = Alignment.CenterVertically) {
-+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-+                StatusLine(
-+                    dot = if (running) Emerald else Color.Gray,
-+                    text = if (running) stringResource(R.string.connection_connected) else stringResource(R.string.connection_not_connected),
-+                )
-+                StatusLine(dot = Amber, text = stringResource(R.string.spatial_ping, pingText))
-+                StatusLine(dot = Pink, text = stringResource(R.string.spatial_speed_line, speedText))
-+            }
-+            NeonSparkline(
-+                values = uiState.trafficHistory,
-+                modifier = Modifier.width(120.dp).height(64.dp),
-+            )
-+        }
-+    }
-+}
-+
-+@Composable
-+private fun StatusLine(dot: Color, text: String) {
-+    Row(verticalAlignment = Alignment.CenterVertically) {
-+        Box(Modifier.size(9.dp).background(dot, CircleShape))
-+        Spacer(Modifier.width(8.dp))
-+        Text(text, color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-+    }
-+}
-+
-+@Composable
-+private fun LocationCard(uiState: MainUiState, onOpenList: () -> Unit, onAction: (MainAction) -> Unit) {
-+    val running = uiState.isRunning
-+    val selected = uiState.selectedInfo
-+    val remarks = selected?.remarks.orEmpty()
-+    // Exit country learned from a connection test wins; otherwise the flag in the config name (an estimate).
-+    val countryCode = selected?.exitCountry ?: TopConfigManager.countryFromName(remarks)
-+    val countryName = remember(countryCode) {
-+        countryCode?.let {
-+            runCatching { Locale.Builder().setRegion(it).build().getDisplayCountry(Locale.getDefault()) }.getOrNull()
-+        }
-+    }
-+    val title = countryName?.takeIf { it.isNotBlank() }
-+        ?: remarks.ifBlank { null }
-+        ?: stringResource(R.string.spatial_no_selection)
-+    val subtitle = if (countryName != null && remarks.isNotBlank()) remarks else null
-+    val delay = selected?.delayMillis ?: 0L
-+    val pingText = when {
-+        delay > 0L -> stringResource(R.string.server_test_delay_value, delay)
-+        delay < 0L -> stringResource(R.string.spatial_test_failed)
-+        else -> stringResource(R.string.spatial_not_tested)
-+    }
-+
-+    GlassCard(modifier = Modifier.fillMaxWidth(), onClick = onOpenList) {
-+        Row(verticalAlignment = Alignment.Top) {
-+            Column(modifier = Modifier.weight(1f)) {
-+                Text(stringResource(R.string.spatial_location), color = TextSoft, fontSize = 15.sp)
-+                Text(
-+                    text = title,
-+                    color = Color.White,
-+                    fontSize = 26.sp,
-+                    fontWeight = FontWeight.Bold,
-+                    maxLines = 2,
-+                    overflow = TextOverflow.Ellipsis,
-+                )
-+                if (subtitle != null) {
-+                    Text(subtitle, color = TextSoft, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-+                }
-+            }
-+            Box(
-+                modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f)),
-+                contentAlignment = Alignment.Center,
-+            ) {
-+                Text(TopConfigManager.flagEmoji(countryCode).ifEmpty { "\uD83C\uDF10" }, fontSize = 22.sp)
-+            }
-+        }
-+        Spacer(Modifier.height(10.dp))
-+        Row(verticalAlignment = Alignment.Bottom) {
-+            Text(stringResource(R.string.spatial_ping, ""), color = TextSoft, fontSize = 16.sp)
-+            Spacer(Modifier.width(6.dp))
-+            Text(pingText, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-+        }
-+        Spacer(Modifier.height(12.dp))
-+        GradientButton(
-+            label = stringResource(if (running) R.string.spatial_disconnect else R.string.spatial_connect),
-+            running = running,
-+            onClick = { onAction(MainAction.ToggleService) },
-+        )
-+    }
-+}
-+
-+@Composable
-+private fun GradientButton(label: String, running: Boolean, onClick: () -> Unit) {
-+    val colors = if (running) {
-+        listOf(Color(0xFF2DD4BF), Color(0xFF8B5CF6), Color(0xFFF87171))
-+    } else {
-+        listOf(Color(0xFF22D3EE), Color(0xFF6366F1), Color(0xFFEC4899))
-+    }
-+    val shape = RoundedCornerShape(18.dp)
-+    Box(
-+        modifier = Modifier
-+            .fillMaxWidth()
-+            .height(56.dp)
-+            .clip(shape)
-+            .background(Brush.horizontalGradient(colors))
-+            .border(1.dp, Color.White.copy(alpha = 0.35f), shape)
-+            .clickable(role = Role.Button, onClick = onClick),
-+        contentAlignment = Alignment.Center,
-+    ) {
-+        Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-+    }
-+}
-+
-+@Composable
-+private fun RoundGlassButton(glyph: String, description: String, onClick: () -> Unit) {
-+    Box(
-+        modifier = Modifier
-+            .size(48.dp)
-+            .clip(CircleShape)
-+            .background(Color.White.copy(alpha = 0.14f))
-+            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-+            .semantics { contentDescription = description }
-+            .clickable(role = Role.Button, onClick = onClick),
-+        contentAlignment = Alignment.Center,
-+    ) {
-+        // Decorative glyph: the box is named by [description].
-+        Text(glyph, color = Color.White, fontSize = 20.sp, modifier = Modifier.clearAndSetSemantics { })
-+    }
-+}
-+
-+@Composable
-+private fun GlassChip(
-+    label: String,
-+    accent: Color,
-+    modifier: Modifier = Modifier,
-+    enabled: Boolean = true,
-+    onClick: () -> Unit,
-+) {
-+    val tint = if (enabled) accent else accent.copy(alpha = 0.35f)
-+    Surface(
-+        onClick = onClick,
-+        enabled = enabled,
-+        modifier = modifier,
-+        shape = RoundedCornerShape(16.dp),
-+        color = Color.White.copy(alpha = 0.10f),
-+        border = BorderStroke(1.dp, tint.copy(alpha = 0.6f)),
-+    ) {
-+        Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-+            Text(label, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-+        }
-+    }
-+}
-+
-+/** Live line chart of the proxy download speed (pink to cyan), with a soft fill. */
-+@Composable
-+private fun NeonSparkline(values: List<Long>, modifier: Modifier = Modifier) {
-+    Canvas(modifier = modifier) {
-+        val points = if (values.size >= 2) values else listOf(0L, 0L)
-+        val max = (points.maxOrNull() ?: 1L).coerceAtLeast(1L).toFloat()
-+        val step = size.width / (points.size - 1)
-+        val line = Path()
-+        val fill = Path()
-+        points.forEachIndexed { i, v ->
-+            val x = i * step
-+            val y = size.height * (1f - (v.toFloat() / max).coerceIn(0.06f, 0.96f))
-+            if (i == 0) {
-+                line.moveTo(x, y)
-+                fill.moveTo(x, size.height)
-+                fill.lineTo(x, y)
-+            } else {
-+                line.lineTo(x, y)
-+                fill.lineTo(x, y)
-+            }
-+        }
-+        fill.lineTo(size.width, size.height)
-+        fill.close()
-+        val brush = Brush.horizontalGradient(listOf(Pink, Magenta, Cyan, Emerald))
-+        drawPath(fill, Brush.verticalGradient(listOf(Cyan.copy(alpha = 0.25f), Color.Transparent)))
-+        drawPath(line, brush, style = Stroke(width = 4f, cap = StrokeCap.Round))
-+    }
-+}
-+
-+// ---------------------------------------------------------------------------------------------
-+// Globe
-+// ---------------------------------------------------------------------------------------------
-+
-+@Composable
-+private fun HomeGlobe(size: androidx.compose.ui.unit.Dp, running: Boolean, reduceMotion: Boolean) {
-+    val globe = remember { GlobePoints.build(HOME_GLOBE_POINTS) }
-+    var drag by remember { mutableFloatStateOf(0f) }
-+    // Longitude -75 (the Americas) faces the viewer at the start: visible centre longitude = -spin.
-+    val startSpin = 1.31f
-+    val modifier = Modifier
-+        .size(size)
-+        .pointerInput(Unit) {
-+            detectHorizontalDragGestures { change, dragAmount ->
-+                change.consume()
-+                drag += dragAmount * 0.01f
-+            }
-+        }
-+    if (reduceMotion) {
-+        Canvas(modifier = modifier) { drawHomeGlobe(globe, startSpin + drag, 0.12f, running) }
-+    } else {
-+        val transition = rememberInfiniteTransition(label = "homeGlobe")
-+        val spin = transition.animateFloat(
-+            initialValue = 0f,
-+            targetValue = (2.0 * PI).toFloat(),
-+            animationSpec = infiniteRepeatable(tween(if (running) 26_000 else 52_000, easing = LinearEasing), RepeatMode.Restart),
-+            label = "spin",
-+        )
-+        val rings = transition.animateFloat(
-+            initialValue = 0f,
-+            targetValue = 1f,
-+            animationSpec = infiniteRepeatable(tween(18_000, easing = LinearEasing), RepeatMode.Restart),
-+            label = "rings",
-+        )
-+        // Both states are read in the draw block, so only the canvas redraws each frame.
-+        Canvas(modifier = modifier) { drawHomeGlobe(globe, startSpin + spin.value + drag, rings.value, running) }
-+    }
-+}
-+
-+private fun DrawScope.drawHomeGlobe(globe: GlobePoints, spin: Float, ringProgress: Float, running: Boolean) {
-+    val cx = size.width / 2f
-+    val cy = size.height / 2f
-+    val radius = size.minDimension * 0.34f
-+    val center = Offset(cx, cy)
-+
-+    // Volume: soft outer glow and a dark core so the dots stand out
-+    drawCircle(
-+        brush = Brush.radialGradient(
-+            listOf(OceanBlue.copy(alpha = 0.40f), Magenta.copy(alpha = 0.16f), Color.Transparent),
-+            center = center,
-+            radius = radius * 1.3f,
-+        ),
-+        radius = radius * 1.3f,
-+        center = center,
-+    )
-+    drawCircle(Color(0xFF0B1240).copy(alpha = 0.55f), radius, center)
-+
-+    val cosY = cos(spin)
-+    val sinY = sin(spin)
-+    val tilt = 0.38f
-+    val cosX = cos(tilt)
-+    val sinX = sin(tilt)
-+    for (i in 0 until globe.size) {
-+        val x0 = globe.x[i]
-+        val y0 = globe.y[i]
-+        val z0 = globe.z[i]
-+        // Positive spin moves the front of the globe to the right (the Earth turns west to east)
-+        val x1 = x0 * cosY + z0 * sinY
-+        val z1 = z0 * cosY - x0 * sinY
-+        val y2 = y0 * cosX - z1 * sinX
-+        val z2 = z1 * cosX + y0 * sinX
-+        val depth = ((z2 + 1.1f) / 2.1f).coerceIn(0.05f, 1f)
-+        val land = globe.land[i]
-+        val color = if (land) {
-+            lerp(Cyan, Magenta, (globe.lonDeg[i] + 180f) / 360f).copy(alpha = depth)
-+        } else {
-+            OceanBlue.copy(alpha = depth * 0.5f)
-+        }
-+        val dotRadius = (if (land) 3.4f else 1.5f) * (0.6f + 0.6f * depth)
-+        drawCircle(color, dotRadius, Offset(cx + x1 * radius, cy - y2 * radius))
-+    }
-+    drawCircle(Color.White.copy(alpha = 0.22f), radius, center, style = Stroke(width = 2f))
-+
-+    // Neon orbit rings (a wide faint pass for the glow, then a thin bright one)
-+    val ringColors = listOf(
-+        listOf(Emerald, Cyan, Color(0xFF60A5FA), Emerald),
-+        listOf(Magenta, Color(0xFF8B5CF6), Pink, Magenta),
-+        listOf(Amber, Pink, Cyan, Amber),
-+    )
-+    val baseAngles = floatArrayOf(18f, -38f, 72f)
-+    val flatness = floatArrayOf(0.46f, 0.40f, 0.34f)
-+    val directions = floatArrayOf(1f, -1f, 1f)
-+    for (r in 0 until 3) {
-+        val w = radius * 2.5f
-+        val h = w * flatness[r]
-+        withTransform({ rotate(baseAngles[r] + directions[r] * ringProgress * 360f * 0.5f, center) }) {
-+            val brush = Brush.sweepGradient(ringColors[r], center)
-+            val topLeft = Offset(cx - w / 2f, cy - h / 2f)
-+            drawOval(brush = brush, topLeft = topLeft, size = Size(w, h), alpha = 0.18f, style = Stroke(width = 12f))
-+            drawOval(brush = brush, topLeft = topLeft, size = Size(w, h), style = Stroke(width = 3.5f))
-+        }
-+    }
-+
-+    // While connected: a glowing arc across the face with a travelling packet
-+    if (running) {
-+        val start = Offset(cx - radius * 0.55f, cy + radius * 0.25f)
-+        val end = Offset(cx + radius * 0.55f, cy - radius * 0.2f)
-+        val control = Offset(cx, cy - radius * 0.95f)
-+        val arc = Path().apply {
-+            moveTo(start.x, start.y)
-+            quadraticTo(control.x, control.y, end.x, end.y)
-+        }
-+        drawPath(arc, Brush.horizontalGradient(listOf(Emerald, Cyan)), style = Stroke(width = 4.5f, cap = StrokeCap.Round))
-+        val t = ringProgress
-+        val u = 1f - t
-+        val packet = Offset(
-+            u * u * start.x + 2f * u * t * control.x + t * t * end.x,
-+            u * u * start.y + 2f * u * t * control.y + t * t * end.y,
-+        )
-+        drawCircle(Cyan.copy(alpha = 0.4f), 14f, packet)
-+        drawCircle(Color.White, 5.5f, packet)
-+    }
-+}
-diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/WorldLandMask.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/WorldLandMask.kt
-new file mode 100644
-index 0000000..585ff20
---- /dev/null
-+++ b/V2rayNG/app/src/main/java/com/v2ray/ang/ui/main/WorldLandMask.kt
-@@ -0,0 +1,103 @@
-+package com.v2ray.ang.ui.main
-+
-+import kotlin.math.PI
-+import kotlin.math.acos
-+import kotlin.math.asin
-+import kotlin.math.atan2
-+import kotlin.math.cos
-+import kotlin.math.sin
-+import kotlin.math.sqrt
-+
-+/**
-+ * Very coarse continent outlines used only to colour the decorative globe. They are approximations
-+ * (a few dozen vertices per landmass), not survey data, and say nothing about server locations.
-+ */
-+internal object WorldLandMask {
-+    /** Each array is x0, y0, x1, y1, ... as longitude, latitude in degrees. */
-+    private val polygons: List<FloatArray> = listOf(
-+        // north_america
-+        floatArrayOf(-168f, 66f, -160f, 70f, -140f, 70f, -125f, 70f, -95f, 72f, -80f, 68f, -62f, 58f, -55f, 50f, -66f, 44f, -70f, 41f, -76f, 35f, -81f, 30f, -80f, 25f, -84f, 29f, -90f, 29f, -97f, 26f, -97f, 21f, -105f, 20f, -110f, 24f, -114f, 31f, -117f, 32f, -122f, 37f, -124f, 43f, -125f, 49f, -135f, 58f, -146f, 61f, -152f, 59f, -165f, 55f, -163f, 60f),
-+        // central_america
-+        floatArrayOf(-97f, 21f, -92f, 18f, -88f, 21f, -84f, 15f, -83f, 10f, -78f, 8f, -80f, 8f, -86f, 11f, -92f, 15f, -95f, 17f),
-+        // greenland
-+        floatArrayOf(-73f, 78f, -60f, 82f, -30f, 83f, -20f, 78f, -22f, 70f, -43f, 60f, -50f, 64f, -56f, 70f),
-+        // south_america
-+        floatArrayOf(-78f, 8f, -72f, 12f, -62f, 10f, -52f, 5f, -50f, 0f, -35f, -5f, -39f, -15f, -41f, -22f, -48f, -26f, -53f, -34f, -58f, -38f, -65f, -41f, -66f, -47f, -69f, -52f, -72f, -54f, -75f, -48f, -73f, -38f, -71f, -30f, -70f, -18f, -76f, -14f, -81f, -5f, -80f, 0f),
-+        // europe
-+        floatArrayOf(-10f, 36f, -9f, 43f, -2f, 44f, -5f, 48f, 2f, 51f, 8f, 54f, 10f, 57f, 5f, 60f, 10f, 64f, 18f, 70f, 28f, 71f, 40f, 67f, 33f, 60f, 30f, 55f, 40f, 50f, 36f, 45f, 28f, 41f, 24f, 38f, 20f, 40f, 14f, 44f, 12f, 38f, 16f, 38f, 8f, 44f, 3f, 43f, -5f, 36f),
-+        // africa
-+        floatArrayOf(-17f, 21f, -10f, 30f, -5f, 36f, 10f, 37f, 20f, 32f, 32f, 31f, 35f, 28f, 43f, 12f, 51f, 12f, 46f, 3f, 40f, -5f, 40f, -15f, 35f, -25f, 27f, -34f, 18f, -34f, 12f, -18f, 13f, -8f, 9f, 0f, 8f, 4f, -8f, 4f, -14f, 10f, -17f, 15f),
-+        // asia
-+        floatArrayOf(36f, 45f, 40f, 50f, 33f, 60f, 40f, 67f, 60f, 69f, 80f, 73f, 100f, 77f, 115f, 73f, 140f, 72f, 170f, 69f, 180f, 65f, 163f, 59f, 156f, 51f, 142f, 52f, 140f, 46f, 131f, 42f, 129f, 35f, 122f, 40f, 121f, 30f, 117f, 23f, 108f, 21f, 106f, 10f, 100f, 14f, 103f, 2f, 98f, 8f, 97f, 17f, 92f, 22f, 88f, 22f, 80f, 15f, 77f, 8f, 73f, 17f, 70f, 22f, 62f, 25f, 57f, 26f, 56f, 24f, 59f, 22f, 52f, 16f, 43f, 13f, 35f, 28f, 36f, 32f, 36f, 37f, 28f, 41f),
-+        // australia
-+        floatArrayOf(114f, -22f, 122f, -18f, 130f, -12f, 136f, -12f, 142f, -11f, 146f, -19f, 153f, -26f, 150f, -37f, 141f, -38f, 135f, -34f, 129f, -32f, 115f, -34f),
-+        // japan
-+        floatArrayOf(130f, 31f, 135f, 34f, 140f, 36f, 142f, 40f, 141f, 45f, 145f, 43f, 142f, 38f, 140f, 35f, 135f, 33f, 131f, 33f),
-+        // uk
-+        floatArrayOf(-5f, 50f, 1f, 51f, 2f, 53f, -2f, 57f, -6f, 58f, -5f, 54f),
-+        // iceland
-+        floatArrayOf(-24f, 65f, -14f, 66f, -14f, 64f, -22f, 63f),
-+        // borneo
-+        floatArrayOf(109f, 1f, 117f, 7f, 119f, 1f, 116f, -4f, 110f, -3f),
-+        // sumatra
-+        floatArrayOf(95f, 5f, 105f, -6f, 103f, -5f, 98f, 1f),
-+        // new_guinea
-+        floatArrayOf(131f, -1f, 141f, -3f, 150f, -10f, 141f, -9f, 134f, -4f),
-+        // madagascar
-+        floatArrayOf(44f, -25f, 50f, -15f, 49f, -12f, 44f, -17f),
-+        // new_zealand
-+        floatArrayOf(172f, -35f, 178f, -38f, 174f, -41f, 166f, -46f, 172f, -41f),
-+    )
-+
-+    fun isLand(lonDeg: Float, latDeg: Float): Boolean = polygons.any { contains(it, lonDeg, latDeg) }
-+
-+    /** Even-odd ray casting. */
-+    private fun contains(poly: FloatArray, lon: Float, lat: Float): Boolean {
-+        var inside = false
-+        val n = poly.size / 2
-+        var j = n - 1
-+        for (i in 0 until n) {
-+            val xi = poly[2 * i]
-+            val yi = poly[2 * i + 1]
-+            val xj = poly[2 * j]
-+            val yj = poly[2 * j + 1]
-+            if ((yi > lat) != (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside
-+            j = i
-+        }
-+        return inside
-+    }
-+}
-+
-+/** Points of a Fibonacci sphere with a land flag and longitude each (computed once). */
-+internal class GlobePoints(val x: FloatArray, val y: FloatArray, val z: FloatArray, val land: BooleanArray, val lonDeg: FloatArray) {
-+    val size: Int get() = x.size
-+
-+    companion object {
-+        /**
-+         * Longitude 0 faces the viewer (+z) and east points to +x, so with north up the map is not mirrored.
-+         */
-+        fun build(count: Int): GlobePoints {
-+            val xs = FloatArray(count)
-+            val ys = FloatArray(count)
-+            val zs = FloatArray(count)
-+            val land = BooleanArray(count)
-+            val lons = FloatArray(count)
-+            val golden = (1.0 + sqrt(5.0)) / 2.0
-+            for (i in 0 until count) {
-+                val theta = 2.0 * PI * i / golden
-+                val phi = acos(1.0 - 2.0 * (i + 0.5) / count)
-+                val x = (cos(theta) * sin(phi)).toFloat()
-+                val y = cos(phi).toFloat()
-+                val z = (sin(theta) * sin(phi)).toFloat()
-+                xs[i] = x
-+                ys[i] = y
-+                zs[i] = z
-+                val lat = Math.toDegrees(asin(y.toDouble())).toFloat()
-+                val lon = Math.toDegrees(atan2(x.toDouble(), z.toDouble())).toFloat()
-+                lons[i] = lon
-+                land[i] = WorldLandMask.isLand(lon, lat)
-+            }
-+            return GlobePoints(xs, ys, zs, land, lons)
-+        }
-+    }
-+}
 diff --git a/V2rayNG/app/src/main/java/com/v2ray/ang/util/HttpUtil.kt b/V2rayNG/app/src/main/java/com/v2ray/ang/util/HttpUtil.kt
 index 12b92e3..4ed2b91 100644
 --- a/V2rayNG/app/src/main/java/com/v2ray/ang/util/HttpUtil.kt
@@ -3703,10 +2840,10 @@ index 12b92e3..4ed2b91 100644
  }
 diff --git a/V2rayNG/app/src/main/res/values-ar/strings_spatial.xml b/V2rayNG/app/src/main/res/values-ar/strings_spatial.xml
 new file mode 100644
-index 0000000..6a9f0f3
+index 0000000..a8dd75c
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-ar/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">الإعداد المحدد</string>
@@ -3766,21 +2903,13 @@ index 0000000..6a9f0f3
 +    <string name="auto_select_expand_title">لا استجابة</string>
 +    <string name="auto_select_expand_message">لم يستجب أي إعداد من الأفضل. هل يتم اختبار %1$d إعدادًا تاليًا من هذه المجموعة؟ يستغرق ذلك وقتًا ويستهلك بيانات.</string>
 +    <string name="auto_select_expand_confirm">اختبرها</string>
-+    <string name="spatial_connection">الاتصال</string>
-+    <string name="spatial_location">الموقع:</string>
-+    <string name="spatial_ping">الاستجابة: %1$s</string>
-+    <string name="spatial_speed_line">السرعة: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f ميغابت/ث</string>
-+    <string name="spatial_connect">اتصال</string>
-+    <string name="spatial_disconnect">قطع الاتصال</string>
-+    <string name="spatial_menu">القائمة</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-az/strings_spatial.xml b/V2rayNG/app/src/main/res/values-az/strings_spatial.xml
 new file mode 100644
-index 0000000..582352d
+index 0000000..462f216
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-az/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">Seçilmiş konfiqurasiya</string>
@@ -3840,21 +2969,13 @@ index 0000000..582352d
 +    <string name="auto_select_expand_title">Cavab verən olmadı</string>
 +    <string name="auto_select_expand_message">Ən yaxşılar siyahısından heç biri cavab vermədi. Bu qrupun növbəti %1$d konfiqurasiyası yoxlansın? Bu vaxt aparır və data işlədir.</string>
 +    <string name="auto_select_expand_confirm">Yoxla</string>
-+    <string name="spatial_connection">Qoşulma</string>
-+    <string name="spatial_location">Məkan:</string>
-+    <string name="spatial_ping">Ping: %1$s</string>
-+    <string name="spatial_speed_line">Sürət: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">Qoşul</string>
-+    <string name="spatial_disconnect">Əlaqəni kəs</string>
-+    <string name="spatial_menu">Menyu</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-bn/strings_spatial.xml b/V2rayNG/app/src/main/res/values-bn/strings_spatial.xml
 new file mode 100644
-index 0000000..4ba1068
+index 0000000..d43e44a
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-bn/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">নির্বাচিত কনফিগ</string>
@@ -3914,21 +3035,13 @@ index 0000000..4ba1068
 +    <string name="auto_select_expand_title">কেউ সাড়া দেয়নি</string>
 +    <string name="auto_select_expand_message">সেরা তালিকার কোনো কনফিগ সাড়া দেয়নি। এই গ্রুপের পরবর্তী %1$d কনফিগ পরীক্ষা করবেন? এতে সময় লাগে এবং ডেটা খরচ হয়।</string>
 +    <string name="auto_select_expand_confirm">পরীক্ষা করুন</string>
-+    <string name="spatial_connection">সংযোগ</string>
-+    <string name="spatial_location">অবস্থান:</string>
-+    <string name="spatial_ping">পিং: %1$s</string>
-+    <string name="spatial_speed_line">গতি: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">সংযুক্ত করুন</string>
-+    <string name="spatial_disconnect">সংযোগ বিচ্ছিন্ন করুন</string>
-+    <string name="spatial_menu">মেনু</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-bqi-rIR/strings_spatial.xml b/V2rayNG/app/src/main/res/values-bqi-rIR/strings_spatial.xml
 new file mode 100644
-index 0000000..8595597
+index 0000000..88ec07d
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-bqi-rIR/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">کانفیگ انتخاب‌شده</string>
@@ -3988,21 +3101,13 @@ index 0000000..8595597
 +    <string name="auto_select_expand_title">هیچ‌کدام پاسخ ندادند</string>
 +    <string name="auto_select_expand_message">هیچ‌کدام از کانفیگ‌های برتر پاسخ ندادند. %1$d کانفیگ بعدی این گروه تست شود؟ این کار زمان می‌برد و اینترنت مصرف می‌کند.</string>
 +    <string name="auto_select_expand_confirm">تستشان کن</string>
-+    <string name="spatial_connection">وضعیت اتصال</string>
-+    <string name="spatial_location">مکان:</string>
-+    <string name="spatial_ping">پینگ: %1$s</string>
-+    <string name="spatial_speed_line">سرعت: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f مگابیت بر ثانیه</string>
-+    <string name="spatial_connect">اتصال</string>
-+    <string name="spatial_disconnect">قطع اتصال</string>
-+    <string name="spatial_menu">منو</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-fa/strings_spatial.xml b/V2rayNG/app/src/main/res/values-fa/strings_spatial.xml
 new file mode 100644
-index 0000000..8595597
+index 0000000..88ec07d
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-fa/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">کانفیگ انتخاب‌شده</string>
@@ -4062,21 +3167,13 @@ index 0000000..8595597
 +    <string name="auto_select_expand_title">هیچ‌کدام پاسخ ندادند</string>
 +    <string name="auto_select_expand_message">هیچ‌کدام از کانفیگ‌های برتر پاسخ ندادند. %1$d کانفیگ بعدی این گروه تست شود؟ این کار زمان می‌برد و اینترنت مصرف می‌کند.</string>
 +    <string name="auto_select_expand_confirm">تستشان کن</string>
-+    <string name="spatial_connection">وضعیت اتصال</string>
-+    <string name="spatial_location">مکان:</string>
-+    <string name="spatial_ping">پینگ: %1$s</string>
-+    <string name="spatial_speed_line">سرعت: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f مگابیت بر ثانیه</string>
-+    <string name="spatial_connect">اتصال</string>
-+    <string name="spatial_disconnect">قطع اتصال</string>
-+    <string name="spatial_menu">منو</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-ru/strings_spatial.xml b/V2rayNG/app/src/main/res/values-ru/strings_spatial.xml
 new file mode 100644
-index 0000000..605538b
+index 0000000..452b19d
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-ru/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">Выбранная конфигурация</string>
@@ -4136,21 +3233,13 @@ index 0000000..605538b
 +    <string name="auto_select_expand_title">Нет ответа</string>
 +    <string name="auto_select_expand_message">Ни одна конфигурация из лучших не ответила. Проверить следующие %1$d конфигураций этой группы? Это займёт время и потратит трафик.</string>
 +    <string name="auto_select_expand_confirm">Проверить</string>
-+    <string name="spatial_connection">Подключение</string>
-+    <string name="spatial_location">Расположение:</string>
-+    <string name="spatial_ping">Пинг: %1$s</string>
-+    <string name="spatial_speed_line">Скорость: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Мбит/с</string>
-+    <string name="spatial_connect">Подключить</string>
-+    <string name="spatial_disconnect">Отключить</string>
-+    <string name="spatial_menu">Меню</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-vi/strings_spatial.xml b/V2rayNG/app/src/main/res/values-vi/strings_spatial.xml
 new file mode 100644
-index 0000000..03e45c9
+index 0000000..90a30f5
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-vi/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">Cấu hình đã chọn</string>
@@ -4210,21 +3299,13 @@ index 0000000..03e45c9
 +    <string name="auto_select_expand_title">Không có phản hồi</string>
 +    <string name="auto_select_expand_message">Không cấu hình nào trong danh sách tốt nhất phản hồi. Kiểm tra %1$d cấu hình tiếp theo của nhóm này? Việc này mất thời gian và tốn dữ liệu.</string>
 +    <string name="auto_select_expand_confirm">Kiểm tra</string>
-+    <string name="spatial_connection">Kết nối</string>
-+    <string name="spatial_location">Vị trí:</string>
-+    <string name="spatial_ping">Ping: %1$s</string>
-+    <string name="spatial_speed_line">Tốc độ: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">Kết nối</string>
-+    <string name="spatial_disconnect">Ngắt kết nối</string>
-+    <string name="spatial_menu">Menu</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-zh-rCN/strings_spatial.xml b/V2rayNG/app/src/main/res/values-zh-rCN/strings_spatial.xml
 new file mode 100644
-index 0000000..4126a4d
+index 0000000..244a909
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-zh-rCN/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">已选配置</string>
@@ -4284,21 +3365,13 @@ index 0000000..4126a4d
 +    <string name="auto_select_expand_title">无响应</string>
 +    <string name="auto_select_expand_message">优选列表中没有配置响应。是否测试本组接下来的 %1$d 个配置？这需要一些时间并消耗流量。</string>
 +    <string name="auto_select_expand_confirm">开始测试</string>
-+    <string name="spatial_connection">连接</string>
-+    <string name="spatial_location">位置：</string>
-+    <string name="spatial_ping">延迟：%1$s</string>
-+    <string name="spatial_speed_line">速度：%1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">连接</string>
-+    <string name="spatial_disconnect">断开连接</string>
-+    <string name="spatial_menu">菜单</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values-zh-rTW/strings_spatial.xml b/V2rayNG/app/src/main/res/values-zh-rTW/strings_spatial.xml
 new file mode 100644
-index 0000000..fc5fe42
+index 0000000..c18ea8a
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values-zh-rTW/strings_spatial.xml
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,60 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 +    <string name="spatial_selected">已選設定</string>
@@ -4358,21 +3431,13 @@ index 0000000..fc5fe42
 +    <string name="auto_select_expand_title">無回應</string>
 +    <string name="auto_select_expand_message">優選清單中沒有設定回應。是否測試本群組接下來的 %1$d 個設定？這需要一些時間並消耗流量。</string>
 +    <string name="auto_select_expand_confirm">開始測試</string>
-+    <string name="spatial_connection">連線</string>
-+    <string name="spatial_location">位置：</string>
-+    <string name="spatial_ping">延遲：%1$s</string>
-+    <string name="spatial_speed_line">速度：%1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">連線</string>
-+    <string name="spatial_disconnect">中斷連線</string>
-+    <string name="spatial_menu">選單</string>
 +</resources>
 diff --git a/V2rayNG/app/src/main/res/values/strings_spatial.xml b/V2rayNG/app/src/main/res/values/strings_spatial.xml
 new file mode 100644
-index 0000000..4bbf19b
+index 0000000..5922781
 --- /dev/null
 +++ b/V2rayNG/app/src/main/res/values/strings_spatial.xml
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,61 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Strings of the spatial header and top configs. -->
 +<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
@@ -4433,14 +3498,6 @@ index 0000000..4bbf19b
 +    <string name="auto_select_expand_title">Nothing answered</string>
 +    <string name="auto_select_expand_message">No config from the top list answered. Test the next %1$d configs of this group? This takes a while and uses data.</string>
 +    <string name="auto_select_expand_confirm">Test them</string>
-+    <string name="spatial_connection">Connection</string>
-+    <string name="spatial_location">Location:</string>
-+    <string name="spatial_ping">Ping: %1$s</string>
-+    <string name="spatial_speed_line">Speed: %1$s</string>
-+    <string name="spatial_speed_mbps">%1$.1f Mbit/s</string>
-+    <string name="spatial_connect">Connect</string>
-+    <string name="spatial_disconnect">Disconnect</string>
-+    <string name="spatial_menu">Menu</string>
 +</resources>
 diff --git a/V2rayNG/app/src/test/java/com/v2ray/ang/handler/ProfileHistoryCarryOverTest.kt b/V2rayNG/app/src/test/java/com/v2ray/ang/handler/ProfileHistoryCarryOverTest.kt
 new file mode 100644
@@ -4711,45 +3768,5 @@ index 0000000..6a1e0df
 +        assertEquals(TestRunStats(), state.runStats)
 +        assertEquals(0, state.resumableCount)
 +        assertEquals(SpeedTestState.Idle, state.speedTest)
-+    }
-+}
-diff --git a/V2rayNG/app/src/test/java/com/v2ray/ang/ui/main/WorldLandMaskTest.kt b/V2rayNG/app/src/test/java/com/v2ray/ang/ui/main/WorldLandMaskTest.kt
-new file mode 100644
-index 0000000..0d7e69c
---- /dev/null
-+++ b/V2rayNG/app/src/test/java/com/v2ray/ang/ui/main/WorldLandMaskTest.kt
-@@ -0,0 +1,34 @@
-+package com.v2ray.ang.ui.main
-+
-+import org.junit.jupiter.api.Assertions.assertEquals
-+import org.junit.jupiter.api.Assertions.assertFalse
-+import org.junit.jupiter.api.Assertions.assertTrue
-+import org.junit.jupiter.api.Test
-+
-+class WorldLandMaskTest {
-+
-+    @Test
-+    fun knownPlaces_areClassifiedAsExpected() {
-+        assertTrue(WorldLandMask.isLand(2.3f, 48.9f))      // Paris
-+        assertTrue(WorldLandMask.isLand(-100f, 40f))       // USA
-+        assertTrue(WorldLandMask.isLand(135f, -25f))       // Australia
-+        assertTrue(WorldLandMask.isLand(139.7f, 35.7f))    // Tokyo
-+        assertTrue(WorldLandMask.isLand(78f, 22f))         // India
-+        assertTrue(WorldLandMask.isLand(-55f, -10f))       // Brazil
-+        assertFalse(WorldLandMask.isLand(-150f, 0f))       // Pacific
-+        assertFalse(WorldLandMask.isLand(-30f, 0f))        // Atlantic
-+        assertFalse(WorldLandMask.isLand(80f, -30f))       // Indian Ocean
-+    }
-+
-+    @Test
-+    fun globePoints_haveUnitLengthAndPlausibleLandShare() {
-+        val globe = GlobePoints.build(900)
-+        assertEquals(900, globe.size)
-+        for (i in 0 until globe.size) {
-+            val length = globe.x[i] * globe.x[i] + globe.y[i] * globe.y[i] + globe.z[i] * globe.z[i]
-+            assertEquals(1f, length, 1e-3f)
-+        }
-+        val share = globe.land.count { it }.toFloat() / globe.size
-+        assertTrue(share in 0.15f..0.40f, "land share was $share")
 +    }
 +}

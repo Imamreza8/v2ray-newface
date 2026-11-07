@@ -1,39 +1,32 @@
-# Beginner workflow: builds an APK of v2rayNG 2.3.14 + the spatial/top-configs patch, entirely on GitHub.
-# Put this file in your fork as .github/workflows/build-spatial-apk.yml and upload
-# v2rayNG-spatial-vNN.patch to the ROOT of the same fork (the highest NN is used). Then: Actions -> Build spatial APK -> Run workflow.
+# Builds the spatial APK from the source on the selected branch.
 name: Build spatial APK
 
 on:
   workflow_dispatch:
+    inputs:
+      source_version:
+        description: 'Source version to build'
+        required: true
+        type: choice
+        default: current
+        options:
+          - current
+          - previous-v6
+  push:
+    branches:
+      - arena/3b695412-v2ray-newface
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-    - name: Checkout upstream v2rayNG 2.3.14 (with submodules)
+    - name: Checkout source (with submodules)
       uses: actions/checkout@v7
       with:
-        repository: 2dust/v2rayNG
-        ref: 2.3.14
+        # The previous source stays immutable even as this branch advances.
+        ref: ${{ inputs.source_version == 'previous-v6' && '265b743993b7f704c8c216f089c7b2ecabf60c71' || github.sha }}
         submodules: 'recursive'
         fetch-depth: '0'
-
-    - name: Checkout your fork (only to read the patch file)
-      uses: actions/checkout@v7
-      with:
-        path: mine
-
-    - name: Apply the patch (the highest version in your repo is used)
-      run: |
-        PATCH=$(ls mine/v2rayNG-spatial-v*.patch 2>/dev/null | sort -V | tail -1)
-        test -n "$PATCH" || { echo "No file named v2rayNG-spatial-vNN.patch in the root of your fork"; exit 1; }
-        echo "Using patch: $PATCH"
-        wc -c "$PATCH"
-        sha256sum "$PATCH"
-        git apply --check "$PATCH"
-        git apply "$PATCH"
-        echo "Patch applied. CoreServiceManager.kt lines 62-80 for verification:"
-        sed -n 62,80p V2rayNG/app/src/main/java/com/v2ray/ang/core/CoreServiceManager.kt
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
@@ -79,23 +72,217 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Unit tests (failures here do not stop the APK)
-      continue-on-error: true
+    - name: Test and build arm64 debug APK
+      shell: bash
       run: |
-        cd ${{ github.workspace }}/V2rayNG
+        cd "${{ github.workspace }}/V2rayNG"
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        ./gradlew :app:testFdroidDebugUnitTest
+        set +e
+        ./gradlew :app:testFdroidDebugUnitTest :app:assembleFdroidDebug -PABI_FILTERS=arm64-v8a 2>&1 | tee "$RUNNER_TEMP/gradle-spatial.log"
+        result=${PIPESTATUS[0]}
+        if [ "$result" -ne 0 ]; then
+          grep -E '^(e: |error: |Execution failed for task|[[:space:]]*> )' "$RUNNER_TEMP/gradle-spatial.log" | head -40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit "$result"
+        fi
 
-    - name: Build APK (fdroid debug, installs next to the official app)
+    - name: Test and assemble Play Store debug
+      shell: bash
       run: |
-        cd ${{ github.workspace }}/V2rayNG
-        echo "sdk.dir=${ANDROID_HOME}" > local.properties
-        chmod 755 gradlew
-        ./gradlew :app:assembleFdroidDebug
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:testPlaystoreDebugUnitTest :app:compilePlaystoreDebugKotlin :app:assemblePlaystoreDebug -PABI_FILTERS=arm64-v8a
 
-    - name: Upload APKs
+    - name: Test and assemble Newface debug
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:testNewfaceDebugUnitTest :app:assembleNewfaceDebug \
+          -PABI_FILTERS=arm64-v8a -PNEWFACE_VERSION_CODE="${{ github.run_number }}"
+
+    - name: Verify Newface debug package identity
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mapfile -t apks < <(find V2rayNG/app/build/outputs/apk/newface/debug -name '*arm64-v8a*.apk')
+        test "${#apks[@]}" -eq 1
+        badging=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "${apks[0]}")
+        printf '%s\n' "$badging" | grep -F "package: name='com.v2ray.ang.newface' versionCode='${{ github.run_number }}'"
+        printf '%s\n' "$badging" | grep -F "application-label:'v2ray Newface'"
+        shortcuts=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump xmltree "${apks[0]}" res/xml/shortcuts.xml)
+        printf '%s\n' "$shortcuts" | grep -F 'com.v2ray.ang.newface'
+        if printf '%s\n' "$shortcuts" | grep -F 'com.v2ray.ang.fdroid'; then
+          echo '::error::Newface shortcuts target the F-Droid app.'
+          exit 1
+        fi
+
+    - name: Verify and upload Newface debug APK
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mapfile -t apks < <(find V2rayNG/app/build/outputs/apk/newface/debug -name '*arm64-v8a*.apk')
+        test "${#apks[@]}" -eq 1
+        "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "${apks[0]}"
+        APK_PATH="${apks[0]}" python3 - <<'PYCODE'
+        import os
+        from zipfile import ZipFile
+
+        with ZipFile(os.environ['APK_PATH']) as apk:
+            names = set(apk.namelist())
+            required = {f'lib/arm64-v8a/{name}' for name in (
+                'libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so'
+            )}
+            missing = required - names
+            unexpected = {name.split('/')[1] for name in names
+                          if name.startswith('lib/') and len(name.split('/')) > 2
+                          and name.split('/')[1] != 'arm64-v8a'}
+            if missing or unexpected:
+                raise SystemExit(f'Missing libraries: {missing}; unexpected ABIs: {unexpected}')
+        PYCODE
+
+    - name: Upload Newface debug APK for testing only
+      if: inputs.source_version != 'previous-v6'
       uses: actions/upload-artifact@v7
       with:
-        name: spatial-apk
-        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
+        # Each runner creates a different debug key. This APK cannot be upgraded reliably.
+        name: newface-arm64-debug-testing-only
+        if-no-files-found: error
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/newface/debug/*arm64-v8a*.apk
+
+    - name: Test Newface release signing with an ephemeral key
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        set -euo pipefail
+        key="$RUNNER_TEMP/ci-newface-test.p12"
+        trap 'rm -f "$key"' EXIT
+        keytool -genkeypair -keystore "$key" -storetype PKCS12 \
+          -alias ci-test -storepass ci-test-password -keypass ci-test-password \
+          -keyalg RSA -keysize 2048 -validity 2 -dname 'CN=Temporary CI test'
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:assembleNewfaceRelease -PABI_FILTERS=arm64-v8a \
+          -PNEWFACE_VERSION_CODE="${{ github.run_number }}" \
+          -Pandroid.injected.signing.store.file="$key" \
+          -Pandroid.injected.signing.store.password=ci-test-password \
+          -Pandroid.injected.signing.key.alias=ci-test \
+          -Pandroid.injected.signing.key.password=ci-test-password
+        mapfile -t apks < <(find app/build/outputs/apk/newface/release -name '*arm64-v8a*.apk')
+        test "${#apks[@]}" -eq 1
+        "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "${apks[0]}"
+        # This test key is discarded and its APK must never be uploaded or installed.
+        rm -f "${apks[0]}"
+
+    - name: Check Newface signing configuration
+      if: inputs.source_version != 'previous-v6'
+      id: newface_signing
+      env:
+        STORE: ${{ secrets.NEWFACE_KEYSTORE_BASE64 }}
+        STORE_PASSWORD: ${{ secrets.NEWFACE_KEYSTORE_PASSWORD }}
+        ALIAS: ${{ secrets.NEWFACE_KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.NEWFACE_KEY_PASSWORD }}
+        CERT_SHA256: ${{ secrets.NEWFACE_CERT_SHA256 }}
+      shell: bash
+      run: |
+        if [[ -n "$STORE" && -n "$STORE_PASSWORD" && -n "$ALIAS" && -n "$KEY_PASSWORD" && -n "$CERT_SHA256" ]]; then
+          echo 'available=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'available=false' >> "$GITHUB_OUTPUT"
+          echo '::warning::Newface signing secrets are not configured. No installable Newface release will be uploaded; see NEWFACE_SIGNING.fa.md.'
+        fi
+
+    - name: Build and verify signed Newface release
+      if: inputs.source_version != 'previous-v6' && steps.newface_signing.outputs.available == 'true'
+      env:
+        STORE: ${{ secrets.NEWFACE_KEYSTORE_BASE64 }}
+        STORE_PASSWORD: ${{ secrets.NEWFACE_KEYSTORE_PASSWORD }}
+        ALIAS: ${{ secrets.NEWFACE_KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.NEWFACE_KEY_PASSWORD }}
+        CERT_SHA256: ${{ secrets.NEWFACE_CERT_SHA256 }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        umask 077
+        key="$RUNNER_TEMP/newface-signing.p12"
+        trap 'rm -f "$key"' EXIT
+        printf '%s' "$STORE" | base64 --decode > "$key"
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:assembleNewfaceRelease -PABI_FILTERS=arm64-v8a \
+          -PNEWFACE_VERSION_CODE="${{ github.run_number }}" \
+          -Pandroid.injected.signing.store.file="$key" \
+          -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+          -Pandroid.injected.signing.key.alias="$ALIAS" \
+          -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+        mapfile -t apks < <(find app/build/outputs/apk/newface/release -name '*arm64-v8a*.apk')
+        test "${#apks[@]}" -eq 1
+        "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "${apks[0]}" | \
+          grep -F "package: name='com.v2ray.ang.newface' versionCode='${{ github.run_number }}'"
+        signature=$("$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --print-certs "${apks[0]}")
+        actual=$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]' | tr -d ':')
+        expected=$(printf '%s' "$CERT_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')
+        [[ "$expected" =~ ^[a-f0-9]{64}$ && "$actual" == "$expected" ]] || { echo '::error::Newface signing certificate does not match the pinned fingerprint.'; exit 1; }
+        APK_PATH="${apks[0]}" python3 - <<'PYCODE'
+        import os
+        from zipfile import ZipFile
+
+        with ZipFile(os.environ['APK_PATH']) as apk:
+            names = set(apk.namelist())
+            required = {f'lib/arm64-v8a/{name}' for name in (
+                'libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so'
+            )}
+            missing = required - names
+            unexpected = {name.split('/')[1] for name in names
+                          if name.startswith('lib/') and len(name.split('/')) > 2
+                          and name.split('/')[1] != 'arm64-v8a'}
+            if missing or unexpected:
+                raise SystemExit(f'Missing libraries: {missing}; unexpected ABIs: {unexpected}')
+        PYCODE
+
+    - name: Upload signed Newface arm64 APK
+      if: inputs.source_version != 'previous-v6' && steps.newface_signing.outputs.available == 'true'
+      uses: actions/upload-artifact@v7
+      with:
+        name: newface-arm64-signed
+        if-no-files-found: error
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/newface/release/*arm64-v8a*.apk
+
+    - name: Verify arm64 native libraries
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        from zipfile import ZipFile
+
+        apks = list(Path('V2rayNG/app/build/outputs/apk/fdroid/debug').glob('*arm64-v8a*.apk'))
+        if len(apks) != 1:
+            raise SystemExit(f'Expected one arm64 APK, got {len(apks)}')
+        with ZipFile(apks[0]) as apk:
+            names = set(apk.namelist())
+            required = {f'lib/arm64-v8a/{name}' for name in (
+                'libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so'
+            )}
+            missing = required - names
+            other_abis = {name.split('/')[1] for name in names
+                          if name.startswith('lib/') and len(name.split('/')) > 2
+                          and name.split('/')[1] != 'arm64-v8a'}
+            if missing or other_abis:
+                raise SystemExit(f'Missing native libraries: {missing}; unexpected ABIs: {other_abis}')
+        print(f'Validated {apks[0]} ({apks[0].stat().st_size} bytes)')
+        PY
+
+    - name: Upload arm64 APK
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.source_version == 'previous-v6' && 'spatial-previous-v6-arm64-debug' || 'spatial-arm64-debug' }}
+        if-no-files-found: error
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk
+
+    - name: Lint test options sheet (Play Store and F-Droid)
+      if: inputs.source_version != 'previous-v6'
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}/V2rayNG"
+        ./gradlew :app:lintPlaystoreDebug :app:lintFdroidDebug -PABI_FILTERS=arm64-v8a

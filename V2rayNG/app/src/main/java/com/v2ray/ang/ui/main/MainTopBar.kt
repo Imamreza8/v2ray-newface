@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -40,14 +41,25 @@ fun MainTopBar(
     onMoreMenuAction: (MainMoreMenuAction) -> Unit
 ) {
     var showImportMenu by remember { mutableStateOf(false) }
+    var showManualImport by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     val importMenuScrollState = rememberScrollState()
-    val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
 
+    if (showManualImport) {
+        ManualImportDialog(onAction = onAction, onDismiss = { showManualImport = false })
+    }
+    if (showMenu) {
+        MoreMenuDialog(
+            onSelected = { action -> showMenu = false; onMoreMenuAction(action) },
+            onDismiss = { showMenu = false },
+        )
+    }
+
     AppTopBar(
+        containerColor = Color.Transparent,
         title = stringResource(R.string.title_server),
         onBackClick = {},
         isLoading = isLoading,
@@ -73,6 +85,12 @@ fun MainTopBar(
                     Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
                 }
             }
+            IconButton(onClick = { onAction(MainAction.LocateSelectedServer) }) {
+                Icon(
+                    painterResource(R.drawable.ic_locate_selected_24dp),
+                    contentDescription = stringResource(R.string.title_locate_selected_config),
+                )
+            }
             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                 IconButton(onClick = { showImportMenu = true }) {
                     Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add))
@@ -90,7 +108,8 @@ fun MainTopBar(
                         onAction = { action ->
                             showImportMenu = false
                             onAction(action)
-                        }
+                        },
+                        onManual = { showImportMenu = false; showManualImport = true },
                     )
                 }
             }
@@ -98,20 +117,7 @@ fun MainTopBar(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(painterResource(R.drawable.ic_more_vert_24dp), contentDescription = stringResource(R.string.acc_more))
                 }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    scrollState = moreMenuScrollState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .heightIn(max = maxMenuHeight)
-                        .verticalScrollbar(moreMenuScrollState)
-                ) {
-                    MoreMenuContent { action ->
-                        showMenu = false
-                        onMoreMenuAction(action)
-                    }
-                }
+
             }
         }
     )

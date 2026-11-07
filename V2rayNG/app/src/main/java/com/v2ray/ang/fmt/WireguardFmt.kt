@@ -32,7 +32,7 @@ object WireguardFmt : FmtBase() {
         config.publicKey = queryParam["publickey"].orEmpty()
         config.preSharedKey = queryParam["presharedkey"]?.nullIfBlank()
         config.mtu = Utils.parseInt(queryParam["mtu"] ?: AppConfig.WIREGUARD_LOCAL_MTU)
-        config.remoteDNS = queryParam["dns"] ?: ""
+        config.remoteDNS = queryParam["dns"] ?: AppConfig.WIREGUARD_LOCAL_REMOTE_DNS
         config.reserved = queryParam["reserved"] ?: "0,0,0"
         config.finalMask = (queryParam["fm"] ?: queryParam["finalmask"] ?: queryParam["finalMask"])?.nullIfBlank()
 
@@ -83,7 +83,7 @@ object WireguardFmt : FmtBase() {
         config.remarks = System.currentTimeMillis().toString()
         config.localAddress = interfaceParams["address"] ?: AppConfig.WIREGUARD_LOCAL_ADDRESS_V4
         config.mtu = Utils.parseInt(interfaceParams["mtu"] ?: AppConfig.WIREGUARD_LOCAL_MTU)
-        config.remoteDNS = interfaceParams["dns"] ?: ""
+        config.remoteDNS = interfaceParams["dns"] ?: AppConfig.WIREGUARD_LOCAL_REMOTE_DNS
         config.publicKey = peerParams["publickey"].orEmpty()
         config.preSharedKey = peerParams["presharedkey"]?.nullIfBlank()
         val endpoint = peerParams["endpoint"].orEmpty()

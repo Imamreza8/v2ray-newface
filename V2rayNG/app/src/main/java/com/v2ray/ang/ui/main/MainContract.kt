@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
+import com.v2ray.ang.handler.TopConfigManager
 
 /** Locale-neutral state formatted only when it reaches the main UI. */
 sealed interface MainStatus {
@@ -12,6 +13,158 @@ sealed interface MainStatus {
     data class TestProgress(val progress: String) : MainStatus
     data class ConnectionTest(val result: ConnectionTestResult) : MainStatus
 }
+
+internal enum class ConnectionSummaryKind { NEEDS_TEST, SUCCESS, SUCCESS_WITH_COUNTRY, OTHER }
+
+/** Never reuse the selected profile's stored ping as a measurement of the active connection. */
+internal fun connectionSummaryKind(status: MainStatus): ConnectionSummaryKind = when (status) {
+    MainStatus.Connected -> ConnectionSummaryKind.NEEDS_TEST
+    is MainStatus.ConnectionTest -> when {
+        status.result.delayMillis < 0L -> ConnectionSummaryKind.OTHER
+        status.result.country.isNullOrBlank() -> ConnectionSummaryKind.SUCCESS
+        else -> ConnectionSummaryKind.SUCCESS_WITH_COUNTRY
+    }
+    else -> ConnectionSummaryKind.OTHER
+}
+
+/** Keep the active-connection result separate from bulk-test progress. */
+internal fun connectionStatusAfterTestReset(
+    status: MainStatus,
+    isRunning: Boolean,
+    currentPending: Boolean,
+): MainStatus = when {
+    !isRunning -> MainStatus.Disconnected
+    status == MainStatus.Testing && !currentPending -> MainStatus.Connected
+    else -> status
+}
+
+/** Result of an auto-select run, shown to the user for confirmation before anything is switched. */
+data class AutoSelectProposal(
+    val guid: String,
+    val remarks: String,
+    val delayMillis: Long,
+    /** True when it came from "Smart connect": confirming also connects, even if not connected yet. */
+    val connect: Boolean = false,
+)
+
+/** Nothing in the top list answered; asks before testing the next batch of configs from the current group. */
+data class ExpandProposal(val count: Int)
+
+/** Name and last test delay of the selected server, loaded off the main thread by the ViewModel. */
+data class SelectedServerInfo(
+    val remarks: String,
+    val delayMillis: Long,
+    /** Two-letter exit country learned from a connection test, or null. */
+    val exitCountry: String? = null,
+)
+
+/** Quick filter of the server list by test result. */
+enum class ServerStatusFilter { ALL, TOP, ALIVE, UNTESTED, FAILED }
+
+/** Presentation only; never written to the saved subscription order. */
+enum class ServerDisplaySort { DEFAULT, PING, NAME }
+
+/** Filters are evaluated using the same ping value shown in server rows. */
+internal fun matchesServerStatus(delay: Long, filter: ServerStatusFilter, topMaxMillis: Long): Boolean =
+    when (filter) {
+        ServerStatusFilter.ALL -> true
+        ServerStatusFilter.TOP -> delay in 1L..topMaxMillis
+        ServerStatusFilter.ALIVE -> delay > 0L
+        ServerStatusFilter.UNTESTED -> delay == 0L
+        ServerStatusFilter.FAILED -> delay < 0L
+    }
+
+internal fun hasActiveServerFilter(keyword: String, filter: ServerStatusFilter): Boolean =
+    keyword.isNotBlank() || filter != ServerStatusFilter.ALL
+
+/** Collapse only for predominantly vertical list gestures; a small jitter leaves state unchanged. */
+internal fun controlsExpandedAfterScroll(expanded: Boolean, deltaX: Float, deltaY: Float): Boolean = when {
+    !deltaX.isFinite() || !deltaY.isFinite() -> expanded
+    kotlin.math.abs(deltaY) <= 2f || kotlin.math.abs(deltaY) <= kotlin.math.abs(deltaX) -> expanded
+    deltaY < 0f -> false
+    else -> true
+}
+
+/** How many servers of the selected group fall into each [ServerStatusFilter] (search keyword applied). */
+data class FilterCounts(
+    val all: Int = 0,
+    val top: Int = 0,
+    val alive: Int = 0,
+    val untested: Int = 0,
+    val failed: Int = 0,
+)
+
+/** The choices in the list test controls; TOP and FAILED are restricted to visible rows. */
+enum class ScopedTestKind { REAL, TCP, TOP, FAILED, CURRENT }
+
+/** Immutable confirmation snapshot. A group ID may be empty for the all-servers group. */
+data class ScopedTestProposal(
+    val kind: ScopedTestKind,
+    val groupId: String,
+    val groupName: String,
+    val filter: ServerStatusFilter,
+    val visibleCount: Int,
+    val searchActive: Boolean,
+    val guids: List<String>,
+)
+
+enum class ExportScope { GROUP, VISIBLE, SELECTED }
+
+data class ExportProposal(
+    val groupId: String,
+    val groupName: String,
+    val groupGuids: List<String>,
+    val visibleGuids: List<String>,
+    val selectedGuid: String?,
+    val filter: ServerStatusFilter,
+    val searchActive: Boolean,
+)
+
+internal fun exportScopeGuids(proposal: ExportProposal, scope: ExportScope): List<String> = when (scope) {
+    ExportScope.GROUP -> proposal.groupGuids
+    ExportScope.VISIBLE -> proposal.visibleGuids
+    ExportScope.SELECTED -> listOfNotNull(proposal.selectedGuid)
+}
+
+/** Confirmed single-group order; no list indexes are used as identity. */
+data class SaveOrderProposal(
+    val groupId: String,
+    val groupName: String,
+    val sort: ServerDisplaySort,
+    val expected: List<String>,
+    val proposed: List<String>,
+)
+
+/** Counters of the running (or last) bulk test; published at most every 500 ms by the ViewModel. */
+data class TestRunStats(
+    val total: Int = 0,
+    val done: Int = 0,
+    val ok: Int = 0,
+    val failed: Int = 0,
+)
+
+/** Download-speed test of the current connection. */
+sealed interface SpeedTestState {
+    data object Idle : SpeedTestState
+    data object Running : SpeedTestState
+    data class Result(val megabitsPerSecond: Double, val bytes: Long) : SpeedTestState
+    data object Failed : SpeedTestState
+}
+
+/** Pure: Mbit/s for [bytes] received in [millis] (millis is clamped to at least 1). */
+internal fun megabitsPerSecond(bytes: Long, millis: Long): Double =
+    bytes * 8.0 / 1_000_000.0 / (millis.coerceAtLeast(1L) / 1000.0)
+
+/** State of the "top configs" sheet. */
+data class TopUiState(
+    val entries: List<TopConfigManager.Entry> = emptyList(),
+    val limit: Int = TopConfigManager.DEFAULT_LIMIT,
+    val maxDelayMillis: Long = TopConfigManager.DEFAULT_MAX_DELAY_MS,
+    /** Null = all countries; otherwise an ISO alpha-2 code estimated from the server name. */
+    val countryCode: String? = null,
+    val countrySource: TopConfigManager.CountrySource = TopConfigManager.CountrySource.NAME,
+    val isLoading: Boolean = false,
+)
 
 /**
  * Main UI state
@@ -23,11 +176,50 @@ data class MainUiState(
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val connectionStatus: MainStatus = MainStatus.Disconnected,
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
-    val shareQRCodeBitmap: android.graphics.Bitmap? = null
+    val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    val autoSelectProposal: AutoSelectProposal? = null,
+    val selectedInfo: SelectedServerInfo? = null,
+    val spatialExpanded: Boolean = true,
+    val reduceMotion: Boolean = false,
+    val statusFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val displaySort: ServerDisplaySort = ServerDisplaySort.DEFAULT,
+    val filterCounts: FilterCounts = FilterCounts(),
+    val simpleMode: Boolean = false,
+    val expandProposal: ExpandProposal? = null,
+    val scopedTestProposal: ScopedTestProposal? = null,
+    val saveOrderProposal: SaveOrderProposal? = null,
+    val exportProposal: ExportProposal? = null,
+    val runStats: TestRunStats = TestRunStats(),
+    /** Number of configs left from a run the user cancelled; 0 = nothing to resume. */
+    val resumableCount: Int = 0,
+    /** Proxy-only speed from the daemon; only delivered while the speed notification setting is on. */
+    val speedEnabled: Boolean = false,
+    val trafficDownBps: Long = 0L,
+    val trafficUpBps: Long = 0L,
+    val trafficHistory: List<Long> = emptyList(),
+    val speedTest: SpeedTestState = SpeedTestState.Idle,
 )
+
+/** A new selection cannot inherit a previous active-connection measurement. */
+internal fun stateAfterSelectionChange(state: MainUiState, guid: String?, bulkActive: Boolean): MainUiState {
+    if (state.selectedGuid == guid) return state
+    val base = if (state.isRunning) MainStatus.Connected else MainStatus.Disconnected
+    return state.copy(
+        selectedGuid = guid,
+        selectedInfo = null,
+        isTesting = bulkActive,
+        status = when {
+            !bulkActive -> base
+            state.status is MainStatus.TestProgress -> state.status
+            else -> MainStatus.Testing
+        },
+        connectionStatus = base,
+    )
+}
 
 /**
  * All possible user interaction intents
@@ -39,14 +231,22 @@ sealed interface MainAction {
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
     data object TestRealAllServers : MainAction
+    data class PrepareScopedTest(val kind: ScopedTestKind) : MainAction
+    data object ConfirmScopedTest : MainAction
+    data object DismissScopedTest : MainAction
     data object CancelTesting : MainAction
     data object RemoveAllServers : MainAction
     data object RemoveDuplicateServers : MainAction
     data object RemoveInvalidServers : MainAction
     data object SortByTestResults : MainAction
+    data object PrepareSaveOrder : MainAction
+    data object ConfirmSaveOrder : MainAction
+    data object DismissSaveOrder : MainAction
     data object UpdateSubscriptions : MainAction
     data class UpdateGroupSubscription(val groupId: String) : MainAction
     data object ExportAll : MainAction
+    data class ConfirmExport(val scope: ExportScope) : MainAction
+    data object DismissExport : MainAction
 
     data object ImportQRcode : MainAction
     data object ImportClipboard : MainAction
@@ -57,6 +257,7 @@ sealed interface MainAction {
 
     data class SelectGroup(val groupId: String) : MainAction
     data class SelectServer(val guid: String) : MainAction
+    data class MoveServer(val groupId: String, val fromGuid: String, val toGuid: String) : MainAction
     data class RemoveServer(val guid: String) : MainAction
     data class EditServer(val guid: String, val profile: com.v2ray.ang.dto.entities.ProfileItem) : MainAction
     data class Search(val query: String) : MainAction
@@ -69,4 +270,29 @@ sealed interface MainAction {
     data class ImportBatchConfig(val configText: String) : MainAction
 
     data object LocateHandled : MainAction
+
+    // Top configs / auto-select
+    data class SetSpatialExpanded(val expanded: Boolean) : MainAction
+    data class SetReduceMotion(val reduce: Boolean) : MainAction
+    data class SetStatusFilter(val filter: ServerStatusFilter) : MainAction
+    data class SetDisplaySort(val sort: ServerDisplaySort) : MainAction
+    data object RefreshTop : MainAction
+    data class SetTopFilter(
+        val limit: Int,
+        val maxDelayMillis: Long,
+        val countryCode: String?,
+        val countrySource: TopConfigManager.CountrySource,
+    ) : MainAction
+    data object ResumeTesting : MainAction
+    data class SetSpatialTheme(val enabled: Boolean) : MainAction
+    data class SetSimpleMode(val enabled: Boolean) : MainAction
+    data object SmartConnect : MainAction
+    data object ConfirmExpand : MainAction
+    data object DismissExpand : MainAction
+    data object SpeedTestCurrent : MainAction
+    data object TestTopConfigs : MainAction
+    data object AutoSelect : MainAction
+    data object DismissAutoSelect : MainAction
+    /** Handled by the Activity (it owns the service restart); [reconnect] asks for a restart if running. */
+    data class ApplyAutoSelect(val guid: String, val reconnect: Boolean) : MainAction
 }

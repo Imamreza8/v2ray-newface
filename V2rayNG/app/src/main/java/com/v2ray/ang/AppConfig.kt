@@ -20,6 +20,12 @@ object AppConfig {
     const val DEFAULT_SUBSCRIPTION_ID = "__default_subscription__"
 
     /** Preferences mapped to MMKV storage. */
+    const val PREF_SIMPLE_MODE = "pref_simple_mode"
+    const val PREF_SPATIAL_THEME = "pref_spatial_theme"
+    const val PREF_TOP_LIMIT = "pref_top_limit"
+    const val PREF_TOP_MAX_DELAY = "pref_top_max_delay"
+    const val PREF_SPATIAL_EXPANDED = "pref_spatial_expanded"
+    const val PREF_REDUCE_MOTION = "pref_reduce_motion"
     const val PREF_SNIFFING_ENABLED = "pref_sniffing_enabled"
     const val PREF_ROUTE_ONLY_ENABLED = "pref_route_only_enabled"
     const val PREF_PER_APP_PROXY = "pref_per_app_proxy"
@@ -195,6 +201,11 @@ object AppConfig {
     const val MSG_MEASURE_CONFIG_SUCCESS = 72
     const val MSG_MEASURE_CONFIG_NOTIFY = 73
     const val MSG_MEASURE_CONFIG_FINISH = 74
+    const val MSG_TRAFFIC_SPEED = 91
+
+    /** Public file used by the optional download-speed test (about 5 MB, fetched through the connected proxy). */
+    const val SPEED_TEST_URL = "https://speed.cloudflare.com/__down?bytes=5000000"
+    const val SPEED_TEST_MAX_BYTES = 5_000_000L
 
     const val MSG_SUB_UPDATE_START = 8
     const val MSG_SUB_UPDATE_CANCEL = 81

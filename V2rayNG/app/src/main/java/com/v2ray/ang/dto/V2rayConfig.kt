@@ -353,7 +353,6 @@ data class V2rayConfig(
             var expectIPs: List<String>? = null,
             val clientIp: String? = null,
             val skipFallback: Boolean? = null,
-            val finalQuery: Boolean? = null,
             val tag: String? = null,
         )
     }

@@ -1,5 +1,13 @@
 # v2rayNG
 
+## Spatial fork source
+
+`V2rayNG/` contains this fork's spatial interface and server-selection changes directly; no patch
+needs to be applied to read or build them. The source is based on upstream v2rayNG 2.3.14 and the
+spatial changes used by the successful APK build. The older patch files are historical and are not
+used by the spatial build workflow. `.github/workflows/build-spatial-apk.yml` builds the selected
+branch's source and prepares the native dependencies required for an F-Droid debug APK.
+
 A V2Ray client for Android, support [Xray core](https://github.com/XTLS/Xray-core) and [v2fly core](https://github.com/v2fly/v2ray-core)
 
 [![API](https://img.shields.io/badge/API-24%2B-yellow.svg?style=flat)](https://developer.android.com/about/versions/lollipop)

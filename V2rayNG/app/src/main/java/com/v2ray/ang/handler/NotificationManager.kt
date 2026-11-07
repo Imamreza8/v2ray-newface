@@ -11,6 +11,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.dto.TrafficSpeed
+import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.R
 import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -265,6 +267,17 @@ object NotificationManager {
 
         val proxyTotal = proxyUplink + proxyDownlink
         val directTotal = directUplink + directDownlink
+        // Proxy-only speed for the main screen (the daemon owns the core, so the UI cannot query it).
+        getService()?.takeIf { CoreServiceManager.hasUiClient() }?.let { service ->
+            MessageHelper.sendMsg2UI(
+                service,
+                AppConfig.MSG_TRAFFIC_SPEED,
+                TrafficSpeed(
+                    uplinkBytesPerSec = (proxyUplink / sinceLastQueryInSeconds).toLong(),
+                    downlinkBytesPerSec = (proxyDownlink / sinceLastQueryInSeconds).toLong(),
+                ),
+            )
+        }
         val zeroSpeed = proxyTotal + directTotal == 0L
         if (!zeroSpeed || !lastZeroSpeed) {
             val text = StringBuilder()

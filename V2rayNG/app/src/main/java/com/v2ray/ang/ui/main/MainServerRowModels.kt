@@ -13,12 +13,24 @@ internal data class ServerRowUiModel(
     val statistics: String,
     val typeDescription: String,
     val testDelayMillis: Long,
+    /** When [testDelayMillis] was measured (0 = unknown); the list marks old results. */
+    val testTime: Long,
     val subscriptionBadge: String,
 )
 
 internal data class ServerGroupUiState(
     val servers: List<ServersCache> = emptyList(),
     val rows: List<ServerRowUiModel> = emptyList(),
+    /** Null while this group has not been loaded. Counts are before search/status filtering. */
+    val totalCount: Int? = null,
+    /** Keyword-matched source rows, including those hidden by the status filter. */
+    val keywordServers: List<ServersCache> = emptyList(),
+    val keywordRows: List<ServerRowUiModel> = emptyList(),
+    val keyword: String = "",
+    val appliedFilter: ServerStatusFilter = ServerStatusFilter.ALL,
+    val appliedSort: ServerDisplaySort = ServerDisplaySort.DEFAULT,
+    val topMaxMillis: Long = 0L,
+    val counts: FilterCounts = FilterCounts(),
 )
 
 internal fun buildServerRowUiModel(
@@ -34,6 +46,7 @@ internal fun buildServerRowUiModel(
             ?: AngConfigManager.generateDescription(profile),
         typeDescription = serverProtocolDescription(profile),
         testDelayMillis = server.testDelayMillis,
+        testTime = server.testTime,
         subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
     )
 }
@@ -58,4 +71,19 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
         }
     }
     return parts.joinToString(" / ")
+}
+
+internal enum class ResultAgeUnit { UNKNOWN, MINUTES, HOURS, DAYS }
+internal data class ResultAge(val unit: ResultAgeUnit, val value: Long = 0L)
+
+/** No age for untested entries; timestamps from old versions or a future clock are unknown. */
+internal fun serverResultAge(delayMillis: Long, testedAt: Long, now: Long): ResultAge? {
+    if (delayMillis == 0L) return null
+    if (testedAt <= 0L || now <= 0L || testedAt > now) return ResultAge(ResultAgeUnit.UNKNOWN)
+    val minutes = (now - testedAt) / 60_000L
+    return when {
+        minutes < 60L -> ResultAge(ResultAgeUnit.MINUTES, minutes)
+        minutes < 24L * 60L -> ResultAge(ResultAgeUnit.HOURS, minutes / 60L)
+        else -> ResultAge(ResultAgeUnit.DAYS, minutes / (24L * 60L))
+    }
 }

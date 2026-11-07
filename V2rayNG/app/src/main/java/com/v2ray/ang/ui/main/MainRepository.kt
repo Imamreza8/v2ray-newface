@@ -11,6 +11,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.RealPingResult
 import com.v2ray.ang.dto.SubscriptionUpdateResult
+import com.v2ray.ang.dto.TrafficSpeed
 import com.v2ray.ang.dto.TestServiceMessage
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.ServerAffiliationInfo
@@ -73,6 +74,9 @@ class MainRepository(
                     requestId
                 )
                 AppConfig.MSG_MEASURE_CONFIG_CANCEL -> MainServiceEvent.MeasureConfigCancelled(requestId)
+                AppConfig.MSG_TRAFFIC_SPEED -> safeIntent
+                    .serializable<TrafficSpeed>("content")
+                    ?.let { MainServiceEvent.Traffic(it) }
 
                 else -> null
             }
@@ -162,6 +166,9 @@ class MainRepository(
 
     override fun encodeServerList(guids: List<String>, groupId: String) =
         MmkvManager.encodeServerList(ArrayList(guids), groupId)
+
+    override fun reorderServerListIfUnchanged(groupId: String, expected: List<String>, proposed: List<String>): Boolean =
+        MmkvManager.reorderServerListIfUnchanged(groupId, expected, proposed)
 
     override fun removeServer(guid: String) = MmkvManager.removeServer(guid)
 
