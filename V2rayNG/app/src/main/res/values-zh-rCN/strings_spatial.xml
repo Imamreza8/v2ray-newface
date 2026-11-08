@@ -136,4 +136,10 @@
     <string name="recorded_exit_country">上次结果记录的出口国家：%1$s</string>
     <string name="search_clear">清除搜索</string>
     <string name="show_connection_bar">显示连接栏</string>
+    <string name="subscription_total_unknown">未知</string>
+    <string name="subscription_expiry_only">到期：%1$s</string>
+    <string name="spatial_choose_group_current_with_count">选择分组，当前：%1$s，%2$d 个配置</string>
+    <string name="spatial_visible_config_count">%1$d / %2$d 个配置</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

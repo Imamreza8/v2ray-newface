@@ -97,4 +97,9 @@ class MainImportMenuTest {
         assertEquals(expected.toSet(), rendered.toSet())
     }
 
+    @Test
+    fun detailsAreHiddenFromMenuWhenNoInformationIsAvailable() {
+        assertEquals(listOf(MainMoreMenuAction.LocateSelected), secondaryToolActions(showDetails = false))
+        assertEquals(listOf(MainMoreMenuAction.GroupDetails, MainMoreMenuAction.LocateSelected), secondaryToolActions(showDetails = true))
+    }
 }

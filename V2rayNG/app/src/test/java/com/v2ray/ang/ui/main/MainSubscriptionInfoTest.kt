@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
+import com.v2ray.ang.dto.GroupMapItem
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -46,5 +47,19 @@ class MainSubscriptionInfoTest {
         val model = buildSubscriptionInfoUiModel(SubscriptionUsageInfo(expire = 0), now)
         assertNull(model.expireMillis)
         assertFalse(model.expired)
+    }
+    @Test
+    fun detailsAreOnlyOfferedWhenSubscriptionProvidesActualInformation() {
+        assertFalse(hasSubscriptionDetails(null))
+        assertFalse(hasSubscriptionDetails(GroupMapItem("", "all", SubscriptionUsageInfo(total = 50))))
+        assertFalse(hasSubscriptionDetails(GroupMapItem("g", "name", null)))
+        assertFalse(hasSubscriptionDetails(GroupMapItem("g", "name", SubscriptionUsageInfo())))
+        assertFalse(hasSubscriptionDetails(GroupMapItem("g", "name", SubscriptionUsageInfo(title = "name"))))
+        assertTrue(hasSubscriptionDetails(GroupMapItem("g", "name", SubscriptionUsageInfo(total = 50))))
+        assertTrue(hasSubscriptionDetails(GroupMapItem("g", "name", SubscriptionUsageInfo(expire = 500))))
+        assertTrue(hasSubscriptionDetails(GroupMapItem("g", "name", SubscriptionUsageInfo(supportUrl = "https://example.org"))))
+        assertFalse(hasKnownTraffic(SubscriptionUsageInfo(title = "title")))
+        assertTrue(hasKnownTraffic(SubscriptionUsageInfo(download = 1)))
+        assertTrue(hasKnownTraffic(SubscriptionUsageInfo(total = 1)))
     }
 }

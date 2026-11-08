@@ -136,4 +136,10 @@
     <string name="recorded_exit_country">بلد الخروج المسجل في آخر نتيجة: %1$s</string>
     <string name="search_clear">مسح البحث</string>
     <string name="show_connection_bar">إظهار شريط الاتصال</string>
+    <string name="subscription_total_unknown">غير معروف</string>
+    <string name="subscription_expiry_only">الانتهاء: %1$s</string>
+    <string name="spatial_choose_group_current_with_count">اختيار المجموعة، الحالية: %1$s، %2$d إعدادات</string>
+    <string name="spatial_visible_config_count">%1$d من %2$d إعدادات</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

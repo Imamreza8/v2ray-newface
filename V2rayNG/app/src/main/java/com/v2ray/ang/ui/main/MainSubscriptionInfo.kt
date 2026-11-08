@@ -42,11 +42,12 @@ private const val CARD_ALPHA = 0.97f
 internal data class SubscriptionInfoUiModel(
     val title: String?,
     val usedBytes: Long,
-    /** Traffic quota in bytes; 0 means unlimited. */
+    val hasTrafficData: Boolean,
+    /** Traffic quota in bytes; 0 can mean unlimited or not provided. */
     val totalBytes: Long,
     /** Used share of the quota in 0..1; null when the quota is unlimited. */
     val trafficFraction: Float?,
-    /** Expiry in epoch milliseconds; null when the subscription never expires. */
+    /** Expiry in epoch milliseconds; null when unavailable or unspecified. */
     val expireMillis: Long?,
     val expired: Boolean,
     val supportUrl: String?,
@@ -68,6 +69,7 @@ internal fun buildSubscriptionInfoUiModel(
     return SubscriptionInfoUiModel(
         title = info.title,
         usedBytes = info.used,
+        hasTrafficData = hasKnownTraffic(info),
         totalBytes = if (unlimited) 0L else info.total,
         trafficFraction = if (unlimited) null else (info.used.toDouble() / info.total).toFloat().coerceIn(0f, 1f),
         expireMillis = expireMillis,
@@ -76,6 +78,18 @@ internal fun buildSubscriptionInfoUiModel(
         webPageUrl = info.webPageUrl,
     )
 }
+
+/** Zero-valued fields cannot distinguish an absent header from an explicit zero. */
+internal fun hasKnownTraffic(info: SubscriptionUsageInfo): Boolean =
+    info.upload > 0 || info.download > 0 || info.total > 0
+
+internal fun hasMeaningfulSubscriptionInfo(info: SubscriptionUsageInfo?): Boolean = info != null &&
+    (hasKnownTraffic(info) || info.expire > 0 ||
+        !info.supportUrl.isNullOrBlank() || !info.webPageUrl.isNullOrBlank())
+
+internal fun hasSubscriptionDetails(group: com.v2ray.ang.dto.GroupMapItem?): Boolean =
+    group != null && group.id.isNotEmpty() && hasMeaningfulSubscriptionInfo(group.usageInfo)
+
 
 /**
  * Fixed box on top of a subscription group showing the account information published by the
@@ -142,7 +156,7 @@ internal fun SubscriptionInfoCard(
                     .padding(end = 8.dp)
                     .semantics(mergeDescendants = true) {}
             ) {
-                StatsRow(model)
+                if (model.hasTrafficData || model.expireMillis != null) StatsRow(model)
                 model.trafficFraction?.let { fraction ->
                     Spacer(Modifier.height(4.dp))
                     LinearProgressIndicator(
@@ -173,19 +187,21 @@ private fun StatsRow(model: SubscriptionInfoUiModel) {
     val totalText = if (model.totalBytes > 0L) {
         model.totalBytes.toTrafficString()
     } else {
-        stringResource(R.string.sub_info_unlimited)
+        stringResource(R.string.subscription_total_unknown)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(
-            text = stringResource(R.string.sub_info_traffic, model.usedBytes.toTrafficString(), totalText),
-            modifier = Modifier.weight(1f, fill = false),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (model.trafficLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (model.hasTrafficData) {
+            Text(
+                text = stringResource(R.string.sub_info_traffic, model.usedBytes.toTrafficString(), totalText),
+                modifier = Modifier.weight(1f, fill = false),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (model.trafficLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         model.expireMillis?.let { expireMillis ->
-            Spacer(Modifier.size(8.dp))
+            if (model.hasTrafficData) Spacer(Modifier.size(8.dp))
             Text(
                 text = Utils.formatTimestamp(expireMillis, EXPIRY_DATE_PATTERN),
                 style = MaterialTheme.typography.bodySmall,

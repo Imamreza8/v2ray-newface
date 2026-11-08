@@ -46,6 +46,7 @@ import com.v2ray.ang.util.Utils
 internal fun GroupSelector(
     groups: List<GroupMapItem>,
     selectedGroupId: String,
+    mainViewModel: MainViewModel,
     onSelectGroup: (String) -> Unit,
     onManageGroups: () -> Unit,
     showGroups: Boolean,
@@ -91,8 +92,11 @@ internal fun GroupSelector(
                         }
                     }
                     items(visibleGroups, key = { "group:${it.id}" }) { group ->
+                        val groupFlow = remember(group.id, mainViewModel) { mainViewModel.serverGroupState(group.id) }
+                        val groupState by groupFlow.collectAsStateWithLifecycle()
                         GroupChoice(
                             label = group.remarks,
+                            count = groupState.totalCount,
                             selected = group.id == selectedGroupId,
                             onSelect = { onShowGroups(false); onSelectGroup(group.id) },
                         )
@@ -109,7 +113,7 @@ internal fun GroupSelector(
             },
         )
     }
-    if (showDetails) {
+    if (showDetails && hasSubscriptionDetails(selected)) {
         AlertDialog(
             onDismissRequest = { onShowDetails(false) },
             title = { Text(selected.remarks) },
@@ -121,13 +125,6 @@ internal fun GroupSelector(
                         onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
                         onRefresh = { onAction(MainAction.UpdateGroupSubscription(selected.id)) },
                     )
-                } else {
-                    Column {
-                        Text(stringResource(R.string.spatial_no_subscription_details))
-                        TextButton(onClick = { onAction(MainAction.UpdateGroupSubscription(selected.id)) }) {
-                            Text(stringResource(R.string.title_sub_update))
-                        }
-                    }
                 }
             },
             confirmButton = {
@@ -140,24 +137,23 @@ internal fun GroupSelector(
 @Composable
 internal fun GroupSubscriptionSummary(groups: List<GroupMapItem>, selectedGroupId: String, onOpen: () -> Unit) {
     val selected = groups.firstOrNull { it.id == selectedGroupId } ?: return
-    if (selected.id.isEmpty()) return
-    val usage = selected.usageInfo
-    val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }
-    if (summary == null) {
-        TextButton(onClick = onOpen) { Text(stringResource(R.string.spatial_subscription_details)) }
-    } else {
+    if (!hasSubscriptionDetails(selected)) return
+    val usage = selected.usageInfo ?: return
+    val summary = remember(usage) { buildSubscriptionInfoUiModel(usage, System.currentTimeMillis()) }
+    val traffic = if (summary.hasTrafficData) {
         val total = if (summary.totalBytes > 0L) summary.totalBytes.toTrafficString()
-            else stringResource(R.string.sub_info_unlimited)
-        val traffic = stringResource(R.string.sub_info_traffic, summary.usedBytes.toTrafficString(), total)
-        val expiry = summary.expireMillis?.let { Utils.formatTimestamp(it, EXPIRY_DATE_PATTERN) }
-            ?: stringResource(R.string.subscription_no_expiry)
-        val line = stringResource(R.string.subscription_summary_line, traffic, expiry)
-        val accessible = stringResource(R.string.subscription_summary_accessible, traffic, expiry)
-        TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = accessible
-        }) {
-            Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
-        }
+            else stringResource(R.string.subscription_total_unknown)
+        stringResource(R.string.sub_info_traffic, summary.usedBytes.toTrafficString(), total)
+    } else null
+    val expiry = summary.expireMillis?.let { Utils.formatTimestamp(it, EXPIRY_DATE_PATTERN) }
+    val line = when {
+        traffic != null && expiry != null -> stringResource(R.string.subscription_summary_line, traffic, expiry)
+        traffic != null -> traffic
+        expiry != null -> stringResource(R.string.subscription_expiry_only, expiry)
+        else -> stringResource(R.string.spatial_subscription_details)
+    }
+    TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+        Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -172,7 +168,9 @@ internal fun GroupSelectorTrigger(
     androidx.compose.runtime.key(selected.id) {
         val selectedGroupFlow = remember(selected.id, mainViewModel) { mainViewModel.serverGroupState(selected.id) }
         val selectedState by selectedGroupFlow.collectAsStateWithLifecycle()
-        val description = stringResource(R.string.spatial_choose_group_current, selected.remarks)
+        val description = selectedState.totalCount?.let { count ->
+            stringResource(R.string.spatial_choose_group_current_with_count, selected.remarks, count)
+        } ?: stringResource(R.string.spatial_choose_group_current, selected.remarks)
         val shape = RoundedCornerShape(24.dp)
         TextButton(
             onClick = onOpen,
@@ -181,10 +179,10 @@ internal fun GroupSelectorTrigger(
                 .semantics(mergeDescendants = true) { contentDescription = description },
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
         ) {
-            Text(selected.remarks, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(selected.remarks, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             selectedState.totalCount?.let { count ->
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.spatial_group_count, count), maxLines = 1)
+                Text(stringResource(R.string.spatial_config_count_short, count), maxLines = 1)
             }
             Icon(painterResource(R.drawable.ic_expand_more_24dp), contentDescription = null)
         }
@@ -194,6 +192,7 @@ internal fun GroupSelectorTrigger(
 @Composable
 private fun GroupChoice(
     label: String,
+    count: Int?,
     selected: Boolean,
     onSelect: () -> Unit,
 ) {
@@ -205,6 +204,12 @@ private fun GroupChoice(
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, modifier = Modifier.weight(1f), color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        Text(label, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        count?.let {
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.spatial_group_count, it), style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
     }
 }

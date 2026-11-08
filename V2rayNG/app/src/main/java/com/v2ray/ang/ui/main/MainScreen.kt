@@ -247,6 +247,7 @@ fun MainScreen(
         GroupSelector(
             groups = groups,
             selectedGroupId = uiState.selectedGroupId,
+            mainViewModel = mainViewModel,
             onSelectGroup = { groupId ->
                 scope.launch {
                     val target = latestGroups.indexOfFirst { it.id == groupId }
@@ -303,13 +304,16 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize().hazeSource(connectionBarHaze)) {
         // Same space backdrop as the home screen, so the list screen no longer looks like another app
         SpatialBackground()
-        val visibleTestCount = if (groups.isNotEmpty()) key(uiState.selectedGroupId) {
+        val selectedGroupState = if (groups.isNotEmpty()) key(uiState.selectedGroupId) {
             val selectedGroupFlow = remember(uiState.selectedGroupId) {
                 mainViewModel.serverGroupState(uiState.selectedGroupId)
             }
-            val selectedGroupState by selectedGroupFlow.collectAsStateWithLifecycle()
-            visibleScopedTestCount(selectedGroupState, searchQuery, uiState.statusFilter, uiState.displaySort)
+            val state by selectedGroupFlow.collectAsStateWithLifecycle()
+            state
         } else null
+        val visibleTestCount = selectedGroupState?.let {
+            visibleScopedTestCount(it, searchQuery, uiState.statusFilter, uiState.displaySort)
+        }
         Scaffold(
             containerColor = Color.Transparent,
             // Transparent Scaffold cannot infer a contrasting foreground from its container.
@@ -319,6 +323,7 @@ fun MainScreen(
                 MainTopBar(
                     isLoading = isLoading,
                     displaySort = uiState.displaySort,
+                    showSubscriptionDetails = hasSubscriptionDetails(groups.firstOrNull { it.id == uiState.selectedGroupId }),
                     isTesting = uiState.isTesting,
                     testEnabled = groups.isNotEmpty(),
                     visibleTestCount = visibleTestCount,
@@ -371,6 +376,8 @@ fun MainScreen(
                     }
                     ServerListChrome(
                         uiState = uiState,
+                        visibleCount = visibleTestCount,
+                        totalCount = selectedGroupState?.totalCount,
                         controlsExpanded = controlsExpanded,
                         onToggleControls = { controlsExpanded = !controlsExpanded },
                         onAction = onAction,
@@ -429,6 +436,7 @@ fun MainScreen(
                 displayText = bottomText,
                 connectionStatus = uiState.connectionStatus,
                 isRunning = isRunning,
+                isTesting = uiState.isTesting,
                 isDarkTheme = isDarkTheme,
                 hazeState = connectionBarHaze,
                 onAction = onAction,

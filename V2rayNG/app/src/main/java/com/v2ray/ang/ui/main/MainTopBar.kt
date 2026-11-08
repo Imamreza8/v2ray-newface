@@ -33,6 +33,7 @@ import com.v2ray.ang.ui.compose.verticalScrollbar
 fun MainTopBar(
     isLoading: Boolean,
     displaySort: ServerDisplaySort,
+    showSubscriptionDetails: Boolean,
     isTesting: Boolean,
     testEnabled: Boolean,
     visibleTestCount: Int?,
@@ -73,6 +74,7 @@ fun MainTopBar(
     if (showMenu) {
         MoreMenuDialog(
             displaySort = displaySort,
+            showDetails = showSubscriptionDetails,
             onSort = { onAction(MainAction.SetDisplaySort(it)) },
             onSearch = { showMenu = false; onSearchToggle(true) },
             onShowConnectionBar = { showMenu = false; onShowConnectionBar() },

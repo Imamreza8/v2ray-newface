@@ -163,9 +163,10 @@ internal fun primaryToolActions(): List<MainMoreMenuAction> = listOf(
     MainMoreMenuAction.UpdateSubscriptions, MainMoreMenuAction.ExportAll, MainMoreMenuAction.RestartService,
 )
 
-internal fun secondaryToolActions(): List<MainMoreMenuAction> = listOf(
-    MainMoreMenuAction.GroupDetails, MainMoreMenuAction.LocateSelected,
-)
+internal fun secondaryToolActions(showDetails: Boolean = true): List<MainMoreMenuAction> = buildList {
+    if (showDetails) add(MainMoreMenuAction.GroupDetails)
+    add(MainMoreMenuAction.LocateSelected)
+}
 
 // ModalBottomSheet is experimental in the pinned Material 3 version; reevaluate when its stable
 // equivalent is available. MainImportMenuTest covers tool routing and category membership.
@@ -173,6 +174,7 @@ internal fun secondaryToolActions(): List<MainMoreMenuAction> = listOf(
 @Composable
 fun MoreMenuDialog(
     displaySort: ServerDisplaySort,
+    showDetails: Boolean,
     onSort: (ServerDisplaySort) -> Unit,
     onSearch: () -> Unit,
     onShowConnectionBar: () -> Unit,
@@ -242,7 +244,7 @@ fun MoreMenuDialog(
                 leadingIcon = { Icon(painterResource(R.drawable.ic_power_spatial_24dp), contentDescription = null) },
                 onClick = onShowConnectionBar,
             )
-            secondaryToolActions().forEach { action ->
+            secondaryToolActions(showDetails).forEach { action ->
                 DropdownMenuItem(
                     text = { Text(stringResource(action.labelRes)) },
                     onClick = { onSelected(action) },

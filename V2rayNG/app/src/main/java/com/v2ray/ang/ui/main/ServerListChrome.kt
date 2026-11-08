@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,8 @@ import com.v2ray.ang.R
 @Composable
 internal fun ServerListChrome(
     uiState: MainUiState,
+    visibleCount: Int?,
+    totalCount: Int?,
     controlsExpanded: Boolean,
     onToggleControls: () -> Unit,
     onAction: (MainAction) -> Unit,
@@ -64,6 +68,19 @@ internal fun ServerListChrome(
     }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (visibleCount != null && totalCount != null) {
+                val spoken = if (visibleCount == totalCount) stringResource(R.string.spatial_group_count, totalCount)
+                    else stringResource(R.string.spatial_visible_config_count, visibleCount, totalCount)
+                Text(
+                    text = stringResource(R.string.spatial_config_count_fraction, visibleCount, totalCount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 8.dp).widthIn(max = 85.dp)
+                        .semantics { contentDescription = spoken },
+                )
+            }
             DisplaySortMenu(
                 selected = uiState.displaySort,
                 onSelect = { onAction(MainAction.SetDisplaySort(it)) },

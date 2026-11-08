@@ -136,4 +136,10 @@
     <string name="recorded_exit_country">کشور خروجی ثبت‌شده در آخرین نتیجه: %1$s</string>
     <string name="search_clear">پاک کردن جست‌وجو</string>
     <string name="show_connection_bar">نمایش نوار اتصال</string>
+    <string name="subscription_total_unknown">نامشخص</string>
+    <string name="subscription_expiry_only">انقضا: %1$s</string>
+    <string name="spatial_choose_group_current_with_count">انتخاب گروه، گروه فعلی: %1$s، %2$d کانفیگ</string>
+    <string name="spatial_visible_config_count">%1$d از %2$d کانفیگ</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

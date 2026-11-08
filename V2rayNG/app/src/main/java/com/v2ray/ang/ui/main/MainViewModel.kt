@@ -661,7 +661,7 @@ class MainViewModel(
                     GroupMapItem(
                         id = it.guid,
                         remarks = it.subscription.remarks,
-                        usageInfo = it.subscription.usageInfo?.let { info ->
+                        usageInfo = it.subscription.usageInfo?.takeIf(::hasMeaningfulSubscriptionInfo)?.let { info ->
                             SubscriptionInfoParser.withWebPageFallback(info, it.subscription.url)
                         },
                     )
@@ -1549,7 +1549,7 @@ class MainViewModel(
     }
 
     fun testCurrentServerRealPing() {
-        if (!uiState.value.isRunning) return
+        if (!canStartCurrentConnectionTest(uiState.value.isRunning, uiState.value.isTesting)) return
         val requestId = testRequests.beginCurrent()
         _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing, connectionStatus = MainStatus.Testing) }
         dataSource.testCurrentServerRealPing(requestId)

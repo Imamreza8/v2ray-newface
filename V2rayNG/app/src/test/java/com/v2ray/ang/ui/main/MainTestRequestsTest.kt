@@ -59,4 +59,11 @@ class MainTestRequestsTest {
         assertEquals(bulk, requests.completeBulk(bulk.id))
         assertFalse(requests.isTesting)
     }
+    @Test
+    fun currentConnectionTestIsAvailableOnlyWhenConnectedAndIdle() {
+        assertTrue(canStartCurrentConnectionTest(isRunning = true, isTesting = false))
+        assertFalse(canStartCurrentConnectionTest(isRunning = false, isTesting = false))
+        assertFalse(canStartCurrentConnectionTest(isRunning = true, isTesting = true))
+        assertFalse(canStartCurrentConnectionTest(isRunning = false, isTesting = true))
+    }
 }

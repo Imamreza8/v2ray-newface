@@ -33,7 +33,8 @@ class ServerVisualContrastTest {
         val onSurface = Color(0xFFE6EAF5)
         val tinted = surface.copy(alpha = CONNECTION_GLASS_TINT_ALPHA).compositeOver(Color.White)
         val highlighted = Color.White.copy(alpha = CONNECTION_GLASS_HIGHLIGHT_ALPHA_DARK).compositeOver(tinted)
-        assertTrue(contrast(onSurface, highlighted) >= 4.5f)
+        val textArea = surface.copy(alpha = CONNECTION_TEXT_SCRIM_ALPHA).compositeOver(highlighted)
+        assertTrue(contrast(onSurface, textArea) >= 4.5f)
     }
 
     @Test

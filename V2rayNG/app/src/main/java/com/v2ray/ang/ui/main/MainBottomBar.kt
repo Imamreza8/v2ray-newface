@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +63,7 @@ fun MainBottomBar(
     displayText: String,
     connectionStatus: MainStatus,
     isRunning: Boolean,
+    isTesting: Boolean,
     isDarkTheme: Boolean,
     hazeState: HazeState,
     onAction: (MainAction) -> Unit,
@@ -86,12 +89,6 @@ fun MainBottomBar(
             title = { Text(stringResource(R.string.spatial_connection)) },
             text = { Text(displayText, modifier = Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = {
-                TextButton(enabled = isRunning, onClick = {
-                    showConnectionDetails = false
-                    onAction(MainAction.TestCurrentServer)
-                }) { Text(stringResource(R.string.scoped_test_current)) }
-            },
-            dismissButton = {
                 TextButton(onClick = { showConnectionDetails = false }) { Text(stringResource(R.string.action_close)) }
             },
         )
@@ -112,7 +109,7 @@ fun MainBottomBar(
                 // Keep light text legible even over bright content behind the panel.
                 colorEffects(listOf(HazeColorEffect.tint(surface.copy(alpha = CONNECTION_GLASS_TINT_ALPHA))))
                 // Android 11 and below use Haze's scrim fallback, not backdrop blur.
-                fallbackColorEffect(HazeColorEffect.tint(surface.copy(alpha = 0.90f)))
+                fallbackColorEffect(HazeColorEffect.tint(surface.copy(alpha = 0.72f)))
                 noiseFactor(0f)
             }
         }
@@ -132,22 +129,44 @@ fun MainBottomBar(
                 .heightIn(min = 56.dp).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = compactText,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Row(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
+                    .background(surface.copy(alpha = CONNECTION_TEXT_SCRIM_ALPHA), RoundedCornerShape(24.dp))
                     .clickable(
+                        enabled = canStartCurrentConnectionTest(isRunning, isTesting),
                         role = Role.Button,
-                        onClickLabel = stringResource(R.string.connection_open_details),
-                        onClick = { showConnectionDetails = true },
+                        onClickLabel = stringResource(R.string.scoped_test_current),
+                        onClick = { onAction(MainAction.TestCurrentServer) },
                     )
-                    .padding(end = 12.dp, top = 8.dp, bottom = 8.dp),
-            )
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isRunning) {
+                    Icon(painterResource(R.drawable.ic_flash_on_24dp), contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                }
+                Text(
+                    text = compactText,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(
+                onClick = { showConnectionDetails = true },
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_about_24dp),
+                    contentDescription = stringResource(R.string.connection_open_details),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.background(surface.copy(alpha = CONNECTION_TEXT_SCRIM_ALPHA), CircleShape)
+                        .padding(3.dp).size(20.dp),
+                )
+            }
             FloatingActionButton(
                 onClick = {
                     if (!isRunning) {
@@ -188,5 +207,6 @@ internal fun lastRowCoveredByBar(lastRowBottom: Int?, viewportEnd: Int, barOverl
     lastRowBottom != null && barOverlap > 0 && lastRowBottom > viewportEnd - barOverlap
 
 // Shared with the contrast regression test for a white backdrop beneath the blur.
-internal const val CONNECTION_GLASS_TINT_ALPHA = 0.76f
+internal const val CONNECTION_GLASS_TINT_ALPHA = 0.55f
+internal const val CONNECTION_TEXT_SCRIM_ALPHA = 0.35f
 internal const val CONNECTION_GLASS_HIGHLIGHT_ALPHA_DARK = 0.12f

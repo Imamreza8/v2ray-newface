@@ -137,4 +137,10 @@
     <string name="recorded_exit_country">Last recorded exit country: %1$s</string>
     <string name="search_clear">Clear search</string>
     <string name="show_connection_bar">Show connection bar</string>
+    <string name="subscription_total_unknown">Unknown</string>
+    <string name="subscription_expiry_only">Expires: %1$s</string>
+    <string name="spatial_choose_group_current_with_count">Choose group, current: %1$s, %2$d configs</string>
+    <string name="spatial_visible_config_count">%1$d / %2$d configs</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

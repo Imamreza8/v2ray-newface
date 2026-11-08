@@ -136,4 +136,10 @@
     <string name="recorded_exit_country">Quốc gia đầu ra được ghi trong kết quả gần nhất: %1$s</string>
     <string name="search_clear">Xóa tìm kiếm</string>
     <string name="show_connection_bar">Hiện thanh kết nối</string>
+    <string name="subscription_total_unknown">Không rõ</string>
+    <string name="subscription_expiry_only">Hết hạn: %1$s</string>
+    <string name="spatial_choose_group_current_with_count">Chọn nhóm, hiện tại: %1$s, %2$d cấu hình</string>
+    <string name="spatial_visible_config_count">%1$d / %2$d cấu hình</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

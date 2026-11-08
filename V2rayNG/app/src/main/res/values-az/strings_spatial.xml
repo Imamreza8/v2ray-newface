@@ -136,4 +136,10 @@
     <string name="recorded_exit_country">Son nəticədə qeydə alınan çıxış ölkəsi: %1$s</string>
     <string name="search_clear">Axtarışı təmizlə</string>
     <string name="show_connection_bar">Bağlantı panelini göstər</string>
+    <string name="subscription_total_unknown">Naməlum</string>
+    <string name="subscription_expiry_only">Bitmə tarixi: %1$s</string>
+    <string name="spatial_choose_group_current_with_count">Qrup seçin, cari: %1$s, %2$d konfiqurasiya</string>
+    <string name="spatial_visible_config_count">%1$d / %2$d konfiqurasiya</string>
+    <string name="spatial_config_count_short">%1$d</string>
+    <string name="spatial_config_count_fraction">%1$d / %2$d</string>
 </resources>

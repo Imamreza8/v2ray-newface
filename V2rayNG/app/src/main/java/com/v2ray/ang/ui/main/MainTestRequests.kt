@@ -68,3 +68,7 @@ internal fun visibleScopedTestCount(
     filter: ServerStatusFilter,
     sort: ServerDisplaySort,
 ): Int? = if (scopedListReady(state, keyword, filter) && state.appliedSort == sort) state.servers.size else null
+
+/** A direct current-connection test never starts while disconnected or another test is running. */
+internal fun canStartCurrentConnectionTest(isRunning: Boolean, isTesting: Boolean): Boolean =
+    isRunning && !isTesting
