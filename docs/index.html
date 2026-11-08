@@ -27,6 +27,7 @@
           <button class="group-trigger" data-action="groups" aria-label="انتخاب گروه"><span class="group-name" id="group-name"></span><span class="group-count" id="group-count"></span><span class="chevron"></span></button>
           <div class="header-actions">
             <button class="icon-btn" data-action="search" aria-label="جست‌وجو"></button>
+            <button class="icon-btn" data-action="locate" aria-label="یافتن سرور انتخاب‌شده"></button>
             <button class="icon-btn" data-action="import" aria-label="افزودن کانفیگ"></button>
             <button class="icon-btn" data-action="tools" aria-label="ابزارهای بیشتر"></button>
           </div>
@@ -35,12 +36,12 @@
         <button class="subscription" data-action="group-details"><span class="subscription-icon" id="subscription-icon"></span><span id="subscription-summary"></span><span class="subscription-arrow">‹</span></button>
       </header>
       <div class="list-controls">
-        <div id="progress" class="progress-area" hidden></div>
         <div class="controls-row">
-          <div class="test-split"><button class="test-main" data-action="test-real"><span id="test-icon"></span><span>تست</span><span class="test-count" id="test-count"></span></button><button class="test-options" data-action="test-options" aria-label="گزینه‌های بیشتر تست"><span class="chevron"></span></button></div>
+          <div class="test-split"><button class="test-main" data-action="test-real"><span id="test-icon"></span><span>Test</span><span class="test-count" id="test-count"></span></button><button class="test-options" data-action="test-options" aria-label="گزینه‌های بیشتر تست"><span class="chevron"></span></button></div>
           <button class="sort-trigger" data-action="sort" aria-label="مرتب‌سازی نمایشی"></button>
           <div class="filter-scroll" role="group" aria-label="فیلتر نتایج" id="filters"></div>
         </div>
+        <div id="progress" class="progress-area" hidden></div>
       </div>
       <div class="list-heading"><span>لیست سرورها</span><span id="visible-label"></span></div>
       <section class="server-list" id="server-list" aria-label="سرورها" tabindex="0"></section>

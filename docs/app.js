@@ -9,6 +9,7 @@ const icons = {
   dots: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>',
   sort: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg>',
+  locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
   power: '<svg viewBox="0 0 24 24"><path d="M12 2v10M6.3 5.8a8 8 0 1 0 11.4 0"/></svg>',
   bolt: '<svg viewBox="0 0 24 24"><path d="M13 1 4 13h7l-1 10 10-14h-7z"/></svg>',
   card: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg>',
@@ -20,17 +21,37 @@ const groups = [
   {id:'work', name:'Work', summary:'مصرف نمونه ۸ از ۵۰ گیگابایت · انقضا ۱۶ روز'},
   {id:'free', name:'Free', summary:'اطلاعات اشتراک نمونه موجود نیست'},
 ];
-const values = [42, 150, -1, 82, 0, 241, 0, 64, -1, 195, 34, 0, 330, 108, 72, -1, 0, 185, 54, 99, 0, 146, -1, 0, 63, 171, 0, 95];
-let servers = values.map((delay,i) => ({
-  id:`demo-${i+1}`, group:i<18?'sample':i<24?'work':'free',
-  name:`${i%4===0?'Newface':'ShatakVPN'} ${803431+i*121}`, type:i%3===0?'VLESS · Reality':i%3===1?'Shadowsocks · ws':'VMess · TCP',
-  delay, age:delay===0?'':i%3===0?'۲h':'۱۲m'
+// All countries and measurements below are explicitly illustrative, never inferred from a real profile.
+const exampleRows = [
+  ['ShatakVPN 803431','VLESS · Reality',42,'DE'], ['ShatakVPN 505086','VLESS · Reality',150,'US'],
+  ['ShatakVPN 794674','Shadowsocks · ws',150,'FR'], ['ShatakVPN 805692','Shadowsocks · ws',150,'GB'],
+  ['ShatakVPN 905086','VLESS · Reality',-1,'US'], ['ShatakVPN 803431','Shadowsocks · ws',42,'DE'],
+  ['ShatakVPN 805886','Shadowsocks · ws',150,'GB'], ['ShatakVPN 803465','Shadowsocks · ws',150,'FR'],
+  ['ShatakVPN 803436','VLESS · Reality',150,'DE'], ['ShatakVPN 805101','VLESS · Reality',0,'US'],
+  ['ShatakVPN 805324','VMess · TCP',82,'FR'], ['ShatakVPN 805642','VLESS · Reality',0,'DE'],
+  ['ShatakVPN 806128','VLESS · Reality',-1,'GB'], ['ShatakVPN 806442','Shadowsocks · ws',241,'FR'],
+  ['ShatakVPN 806788','VMess · TCP',0,'DE'], ['ShatakVPN 807431','VLESS · Reality',64,'US'],
+  ['ShatakVPN 807990','Shadowsocks · ws',-1,'DE'], ['ShatakVPN 808105','VLESS · Reality',0,'GB'],
+  ['Work 100101','VLESS · Reality',34,'DE'], ['Work 100102','Shadowsocks · ws',0,'US'],
+  ['Work 100103','VLESS · Reality',330,'FR'], ['Work 100104','VMess · TCP',108,'GB'],
+  ['Work 100105','Shadowsocks · ws',72,'DE'], ['Work 100106','VLESS · Reality',-1,'US'],
+  ['Free 100101','VMess · TCP',0,'FR'], ['Free 100102','VLESS · Reality',185,'DE'],
+  ['Free 100103','Shadowsocks · ws',54,'GB'], ['Free 100104','VMess · TCP',99,'US'],
+];
+const flag = {
+  DE:'<svg viewBox="0 0 30 20"><path fill="#111" d="M0 0h30v7H0z"/><path fill="#e02535" d="M0 7h30v6H0z"/><path fill="#ffce38" d="M0 13h30v7H0z"/></svg>',
+  FR:'<svg viewBox="0 0 30 20"><path fill="#213e9b" d="M0 0h10v20H0z"/><path fill="#fafafa" d="M10 0h10v20H10z"/><path fill="#ee3d4b" d="M20 0h10v20H20z"/></svg>',
+  US:'<svg viewBox="0 0 30 20"><path fill="#f9f9f9" d="M0 0h30v20H0z"/><path stroke="#d84853" stroke-width="1.55" d="M0 .8h30M0 3.9h30M0 7h30M0 10.1h30M0 13.2h30M0 16.3h30M0 19.4h30"/><path fill="#344d91" d="M0 0h13v10H0z"/><path stroke="#fff" stroke-width=".8" stroke-dasharray=".5 1.6" d="M1 2h11M1 4h11M1 6h11M1 8h11"/></svg>',
+  GB:'<svg viewBox="0 0 30 20"><path fill="#243a77" d="M0 0h30v20H0z"/><path stroke="#fff" stroke-width="4" d="M0 0l30 20M30 0 0 20"/><path stroke="#d82e48" stroke-width="1.5" d="M0 0l30 20M30 0 0 20"/><path stroke="#fff" stroke-width="6" d="M15 0v20M0 10h30"/><path stroke="#d82e48" stroke-width="3" d="M15 0v20M0 10h30"/></svg>',
+};
+let servers = exampleRows.map(([name,type,delay,country],i) => ({
+  id:`demo-${i+1}`, group:i<18?'sample':i<24?'work':'free', name,type,delay,country,age:''
 }));
 const filters = [
-  ['all','همه'],['top','برتر'],['alive','موفق'],['untested','تست‌نشده'],['failed','ناموفق'],
+  ['all','All'],['top','Top'],['alive','Alive'],['failed','Failed'],['untested','Untested'],
 ];
 const testNames = {real:'تأخیر واقعی', tcp:'بررسی سریع TCP', top:'تست دوبارهٔ برترها', failed:'تست دوبارهٔ ناموفق‌ها', current:'تست اتصال فعلی'};
-const state = {group:'sample',filter:'all',sort:'default',query:'',selected:'demo-1',connected:false,connectionResult:null,run:null,resume:null};
+const state = {group:'sample',filter:'all',sort:'default',query:'',selected:'demo-6',connected:true,connectionResult:42,connectionCountry:'DE',run:null,resume:null,demoProgress:true};
 const $ = s => document.querySelector(s);
 const modal = $('#modal');
 let toastTimer, runTimer;
@@ -49,6 +70,7 @@ function visibleServers(){
 function showToast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
 function closeModal(){if(modal.open) modal.close()}
 function dialog(title,body,buttons=''){
+  modal.classList.remove('tool-modal');
   $('#modal-content').innerHTML=`<div class="modal-header"><h2 id="modal-title">${escapeHtml(title)}</h2><button class="icon-btn" data-action="dismiss" aria-label="بستن">${icons.close}</button></div>${body}${buttons?`<div class="modal-buttons">${buttons}</div>`:''}`;
   if(!modal.open) modal.showModal();
 }
@@ -59,15 +81,15 @@ function render(){
   const focusedRow=active && active.closest('#server-list') && active.dataset.id
     ? {id:active.dataset.id, action:active.dataset.action} : null;
   const group=currentGroup(), all=groupServers(), searched=searchServers(), visible=visibleServers();
-  $('#group-name').textContent=group.name;$('#group-count').textContent='· '+fa(all.length);
+  $('#group-name').textContent=group.name;$('#group-count').textContent='· '+all.length;
   $('#subscription-summary').textContent=group.summary;
-  $('#test-count').textContent='· '+fa(visible.length);
+  $('#test-count').textContent='';
   $('#visible-label').textContent=`${fa(visible.length)} کانفیگ نمایان`;
-  $('#filters').innerHTML=filters.map(([id,label])=>`<button class="filter-chip" data-action="filter" data-id="${id}" aria-pressed="${state.filter===id}">${label}<span>${fa(searched.filter(s=>matches(s,id)).length)}</span></button>`).join('');
+  $('#filters').innerHTML=filters.map(([id,label])=>`<button class="filter-chip" data-action="filter" data-id="${id}" aria-pressed="${state.filter===id}">${label}<span>${searched.filter(s=>matches(s,id)).length}</span></button>`).join('');
   $('#server-list').innerHTML=visible.length?visible.map(s=>{
     const kind=s.delay<0?'bad':s.delay===0?'':s.delay<150?'good':s.delay<300?'medium':'bad';
-    const label=s.delay<0?'ناموفق':s.delay===0?'تست نشده':`${s.delay} ms`;
-    return `<article class="server-card ${s.id===state.selected?'selected':''}" id="${s.id}"><button class="server-select" data-action="select" data-id="${s.id}" aria-label="انتخاب ${escapeHtml(s.name)}، ${label}" aria-pressed="${s.id===state.selected}"><span class="server-avatar" aria-hidden="true">${s.name[0]}</span><span class="server-info"><span class="server-title">${escapeHtml(s.name)}</span><span class="server-sub">${escapeHtml(s.type)}</span></span><span class="ping ${kind}">${label}${s.age?`<small>${s.age}</small>`:''}</span></button><button class="row-menu" data-action="server-menu" data-id="${s.id}" aria-label="گزینه‌های ${escapeHtml(s.name)}">${icons.dots}</button></article>`;
+    const label=s.delay<0?'Failed':s.delay===0?'Untested':`${s.delay} ms`;
+    return `<article class="server-card ${s.id===state.selected?'selected':''}" id="${s.id}"><button class="server-select" data-action="select" data-id="${s.id}" aria-label="انتخاب ${escapeHtml(s.name)}، ${label}" aria-pressed="${s.id===state.selected}"><span class="server-flag" aria-hidden="true">${flag[s.country] || ''}</span><span class="server-info"><span class="server-title">${escapeHtml(s.name)}</span><span class="server-sub">${escapeHtml(s.type)}</span></span><span class="ping ${kind}">${label}${s.age?`<small>${s.age}</small>`:''}</span></button><button class="row-menu" data-action="server-menu" data-id="${s.id}" aria-label="گزینه‌های ${escapeHtml(s.name)}">${icons.dots}</button></article>`;
   }).join(''):'<div class="empty-state">سروری در این محدوده پیدا نشد.<br>فیلتر یا عبارت جست‌وجو را تغییر دهید.</div>';
   if(focusedRow){
     const row=document.getElementById(focusedRow.id);
@@ -77,10 +99,11 @@ function render(){
   const run=state.run, progress=$('#progress');
   if(run){progress.hidden=false;progress.innerHTML=`<div class="progress-track" aria-hidden="true"><i style="width:${run.total?Math.round(run.done/run.total*100):0}%"></i></div><span>${fa(run.done)} از ${fa(run.total)} · موفق ${fa(run.ok)} · ناموفق ${fa(run.failed)}</span><button data-action="cancel-test">لغو</button>`}
   else if(state.resume?.remaining.length){progress.hidden=false;progress.innerHTML=`<span>تست متوقف شد · ${fa(state.resume.remaining.length)} مورد باقی‌مانده</span><button data-action="resume-test">ادامه</button>`}
+  else if(state.demoProgress){progress.hidden=false;progress.innerHTML=`<div class="progress-track" aria-hidden="true"><i style="width:70%"></i></div><span>13/18 · Sample</span><button data-action="cancel-demo">Cancel</button>`}
   else {progress.hidden=true;progress.innerHTML=''}
   document.querySelectorAll('[data-action="test-real"],[data-action="test-options"]').forEach(el=>el.disabled=!!run);
   $('#connection-dot').classList.toggle('on',state.connected);
-  $('#connection-label').textContent=!state.connected?'قطع است · نیاز به تست':state.connectionResult?`متصل · ${state.connectionResult} ms · نمونه`:'متصل · نیاز به تست';
+  $('#connection-label').textContent=!state.connected?'Disconnected · Needs test':state.connectionResult?`Connected · ${state.connectionResult} ms${state.connectionCountry?' · '+state.connectionCountry:''}`:'Connected · Needs test';
   const power=$('[data-action="toggle-connection"]');power.classList.toggle('off',!state.connected);power.setAttribute('aria-label',state.connected?'قطع اتصال':'اتصال');
 }
 function confirmTest(kind){
@@ -97,6 +120,7 @@ function confirmTest(kind){
 }
 function startRun(kind,group,ids){
   state.resume=null;
+  state.demoProgress=false;
   state.run={kind,group,remaining:[...ids],total:ids.length,done:0,ok:0,failed:0};
   clearInterval(runTimer);
   runTimer=setInterval(()=>{
@@ -109,8 +133,14 @@ function startRun(kind,group,ids){
   render();
 }
 function tools(){
-  const tile=(name,action,icon)=>`<button class="tool-tile" data-action="${action}">${icons[icon]}<span>${name}</span></button>`;
-  dialog('ابزارها',`<div class="tools-grid">${tile('به‌روزرسانی اشتراک','update-sub','refresh')}${tile('خروجی کانفیگ‌ها','export','export')}${tile('راه‌اندازی مجدد','restart','power')}</div><p class="section-title">گروه و ترتیب</p>${option('اطلاعات گروه','','group-details')}${option('ذخیرهٔ ترتیب نمایشی','','save-order')}${option('یافتن سرور انتخاب‌شده','','locate')}<div class="danger-zone"><p class="section-title">⚠ مدیریت و حذف</p>${option('حذف نامعتبرها','','delete-invalid')}${option('حذف تکراری‌ها','','delete-duplicate')}${option('حذف همه','','delete-all')}<p class="modal-desc">در برنامهٔ اندروید حذف دسته‌ای ایمن هنوز تکمیل نشده است.</p></div>`);
+  const tile=(title,subtitle,action,icon)=>`<button class="tool-tile" data-action="${action}">${icons[icon]}<span><small>${subtitle}</small><strong>${title}</strong></span></button>`;
+  const danger=(title,action,primary=false)=>`<button class="danger-button ${primary?'danger-primary':''}" data-action="${action}">${title}</button>`;
+  const sortLabel=state.sort==='ping'?'Ping':state.sort==='name'?'Name':'Default';
+  dialog('More Actions',`<div class="tools-grid">${tile('Update Subscription','به‌روزرسانی اشتراک','update-sub','refresh')}${tile('Export Configs','خروجی کانفیگ‌ها','export','export')}${tile('Restart','راه‌اندازی مجدد','restart','power')}</div>
+    <section class="sort-panel"><div class="sort-panel-head"><strong>Save Sort Order</strong><button class="sort-indicator" data-action="save-order" aria-label="ذخیرهٔ ترتیب نمایشی"></button></div><div class="sort-panel-row"><button class="sort-select" data-action="sort">${state.sort==='default'?'Default / Ping / Name':sortLabel} <span class="chevron"></span></button><button class="save-sort-button" data-action="save-order">Save Permanently</button></div></section>
+    <div class="aux-actions"><button data-action="group-details">اطلاعات گروه</button><button data-action="locate">یافتن سرور انتخاب‌شده</button></div>
+    <div class="danger-zone"><h3><span aria-hidden="true">⚠</span> Danger Zone</h3><div class="danger-row">${danger('Remove Invalid','delete-invalid')}${danger('حذف تکراری‌ها','delete-duplicate')}</div>${danger('Delete All ⚠','delete-all',true)}<p>حذف امن در برنامهٔ اندروید هنوز تکمیل نشده است.</p></div>`);
+  modal.classList.add('tool-modal');
 }
 function groupsDialog(){dialog('انتخاب گروه',`<p class="modal-desc">گروه‌ها در این پیش‌نمایش نمونه هستند.</p>${groups.map(g=>option(escapeHtml(g.name),`${fa(servers.filter(s=>s.group===g.id).length)} کانفیگ نمونه`,'choose-group',`data-id="${g.id}"`,g.id===state.group)).join('')}`)}
 function testOptions(){dialog('گزینه‌های تست',Object.entries(testNames).map(([id,name])=>option(name,id==='tcp'?'فقط بررسی دسترسی؛ مقدار نمایشی':id==='real'?'تأخیر واقعی؛ نتیجه نمایشی':'محدوده قبل از شروع نمایش داده می‌شود','test-kind',`data-id="${id}"`)).join(''))}
@@ -126,7 +156,7 @@ function handle(action,el){
   case 'dismiss':closeModal();break;
   case 'navigation':dialog('منوی برنامه','<p class="modal-desc">این پیش‌نمایش فقط صفحهٔ سرورها و ابزارهای آن را شبیه‌سازی می‌کند.</p>',btn('بستن','dismiss','primary'));break;
   case 'groups':groupsDialog();break;
-  case 'choose-group':state.group=el.dataset.id;state.filter='all';closeModal();render();break;
+  case 'choose-group':state.group=el.dataset.id;state.filter='all';state.demoProgress=false;closeModal();render();break;
   case 'group-details':dialog('اطلاعات گروه',`<p class="modal-desc">${escapeHtml(currentGroup().name)}<br>${escapeHtml(currentGroup().summary)}</p><p class="modal-desc">تمام اطلاعات این بخش ساختگی است.</p>`,btn('بستن','dismiss','primary'));break;
   case 'search':$('#search-box').hidden=false;$('#search-input').focus();break;
   case 'close-search':$('#search-box').hidden=true;$('#search-input').value='';state.query='';render();break;
@@ -137,10 +167,11 @@ function handle(action,el){
   case 'test-kind':confirmTest(el.dataset.id);break;
   case 'test-real':confirmTest('real');break;
   case 'start-test':{const pending=state.pendingTest;closeModal();if(pending && pending.targets.length)startRun(pending.kind,pending.group,pending.targets);break}
-  case 'start-current':state.connectionResult=82;closeModal();render();showToast('تست نمایشی اتصال انجام شد');break;
+  case 'start-current':state.connectionResult=82;state.connectionCountry=servers.find(s=>s.id===state.selected)?.country || null;closeModal();render();showToast('تست نمایشی اتصال انجام شد');break;
+  case 'cancel-demo':state.demoProgress=false;render();break;
   case 'cancel-test':if(state.run){clearInterval(runTimer);state.resume={kind:state.run.kind,group:state.run.group,remaining:[...state.run.remaining]};state.run=null;render()}break;
   case 'resume-test':if(state.resume){const r=state.resume;startRun(r.kind,r.group,r.remaining)}break;
-  case 'select':state.selected=el.dataset.id;render();break;
+  case 'select':if(state.selected!==el.dataset.id){state.connectionResult=null;state.connectionCountry=null}state.selected=el.dataset.id;render();break;
   case 'server-menu':showServerMenu(el.dataset.id);break;
   case 'tools':tools();break;
   case 'import':dialog('افزودن کانفیگ','<p class="modal-desc">این نسخهٔ نمایشی کانفیگ واقعی را وارد یا ذخیره نمی‌کند.</p>'+option('از کلیپ‌بورد','','demo-only')+option('از فایل','','demo-only')+option('ساخت دستی','','demo-only'));break;
@@ -151,13 +182,13 @@ function handle(action,el){
   case 'save-order':dialog('ذخیرهٔ ترتیب',`<p class="modal-desc">گروه ${escapeHtml(currentGroup().name)} · ${fa(groupServers().length)} کانفیگ نمونه</p><p class="modal-desc">در پیش‌نمایش هیچ ترتیبی واقعاً ذخیره نمی‌شود.</p>`,btn('متوجه شدم','dismiss','primary'));break;
   case 'locate':{closeModal();const node=document.getElementById(state.selected);if(node){node.scrollIntoView({block:'center',behavior:'smooth'});showToast('سرور انتخاب‌شده')}else showToast('سرور انتخاب‌شده در این فیلتر یا گروه نیست');break}
   case 'delete-all':case 'delete-invalid':case 'delete-duplicate':showDanger(action);break;
-  case 'toggle-connection':state.connected=!state.connected;state.connectionResult=null;render();showToast('اتصال فقط شبیه‌سازی است');break;
+  case 'toggle-connection':state.connected=!state.connected;state.connectionResult=null;state.connectionCountry=null;render();showToast('اتصال فقط شبیه‌سازی است');break;
   case 'connection-details':dialog('وضعیت اتصال',`<p class="modal-desc">${state.connected?'متصل به‌صورت نمایشی':'قطع است'} · هیچ اتصال VPN واقعی برقرار نمی‌شود.</p>`,btn('تست اتصال','test-current','primary')+btn('بستن','dismiss'));break;
   case 'test-current':confirmTest('current');break;
   case 'demo-only':closeModal();showToast('این عملیات در پیش‌نمایش انجام نمی‌شود');break;
  }
 }
-for(const [selector,icon] of [['[data-action="navigation"]','menu'],['[data-action="search"]','search'],['[data-action="import"]','plus'],['[data-action="tools"]','more'],['[data-action="close-search"]','close'],['[data-action="sort"]','sort'],['[data-action="toggle-connection"]','power'],['#test-icon','bolt'],['#subscription-icon','card'],['#search-icon','search']]) $(selector).innerHTML=icons[icon];
+for(const [selector,icon] of [['[data-action="navigation"]','menu'],['[data-action="search"]','search'],['.header-actions [data-action="locate"]','locate'],['[data-action="import"]','plus'],['[data-action="tools"]','more'],['[data-action="close-search"]','close'],['[data-action="sort"]','sort'],['[data-action="toggle-connection"]','power'],['#test-icon','bolt'],['#subscription-icon','card'],['#search-icon','search']]) $(selector).innerHTML=icons[icon];
 document.addEventListener('click',event=>{const el=event.target.closest('[data-action]');if(el && !el.disabled)handle(el.dataset.action,el)});
 $('#search-input').addEventListener('input',event=>{state.query=event.target.value;render()});
 modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
