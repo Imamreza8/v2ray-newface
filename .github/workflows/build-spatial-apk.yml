@@ -78,6 +78,9 @@ jobs:
       run: |
         cd "${{ github.workspace }}/V2rayNG"
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        # The services.gradle.org redirect to GitHub can return 504; use Gradle's direct
+        # official distribution host for the same wrapper version in this CI checkout.
+        sed -i 's#services.gradle.org/distributions/#downloads.gradle.org/distributions/#' gradle/wrapper/gradle-wrapper.properties
         chmod 755 gradlew
         set +e
         ./gradlew :app:testFdroidDebugUnitTest :app:assembleFdroidDebug -PABI_FILTERS=arm64-v8a 2>&1 | tee "$RUNNER_TEMP/gradle-spatial.log"
