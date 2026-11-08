@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080e1d">
+  <title>پیش‌نمایش صفحه سرورها | Newface</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="workspace">
+    <aside class="intro" aria-label="درباره پیش‌نمایش">
+      <div class="brand"><span class="brand-mark">N</span><span>NEWFACE <small>DESIGN PREVIEW</small></span></div>
+      <div class="intro-copy">
+        <div class="eyebrow"><span></span> تعاملی، برای بررسی ظاهر</div>
+        <h1>یک نگاه نزدیک‌تر<br>به <em>صفحه سرورها.</em></h1>
+        <p>روی فیلترها، تست و منوی ابزار بزنید و تجربهٔ صفحه را بررسی کنید. داده‌های این نسخه نمونه هستند.</p>
+        <div class="intro-notes"><div><span>01</span><p>تست محدوده و فیلترهای زنده</p></div><div><span>02</span><p>منوی ابزار و مرتب‌سازی نمایشی</p></div><div><span>03</span><p>اتصال و عملیات شبیه‌سازی‌شده</p></div></div>
+      </div>
+      <p class="intro-foot">این صفحه به برنامه اندروید و VPN متصل نیست.</p>
+    </aside>
+    <section class="device" aria-label="پیش‌نمایش صفحه سرورها">
+      <div class="preview-banner"><span class="preview-dot"></span> پیش‌نمایش وب <span>·</span> داده‌ها و تست‌ها نمونه‌اند</div>
+      <header class="app-header">
+        <div class="header-row">
+          <button class="icon-btn menu-toggle" data-action="navigation" aria-label="باز کردن منوی برنامه"></button>
+          <button class="group-trigger" data-action="groups" aria-label="انتخاب گروه"><span class="group-name" id="group-name"></span><span class="group-count" id="group-count"></span><span class="chevron"></span></button>
+          <div class="header-actions">
+            <button class="icon-btn" data-action="search" aria-label="جست‌وجو"></button>
+            <button class="icon-btn" data-action="import" aria-label="افزودن کانفیگ"></button>
+            <button class="icon-btn" data-action="tools" aria-label="ابزارهای بیشتر"></button>
+          </div>
+        </div>
+        <div class="search-box" id="search-box" hidden><span id="search-icon"></span><input id="search-input" type="search" placeholder="جست‌وجوی نام یا نوع کانفیگ" autocomplete="off" aria-label="جست‌وجوی سرورها"><button class="icon-btn" data-action="close-search" aria-label="بستن جست‌وجو"></button></div>
+        <button class="subscription" data-action="group-details"><span class="subscription-icon" id="subscription-icon"></span><span id="subscription-summary"></span><span class="subscription-arrow">‹</span></button>
+      </header>
+      <div class="list-controls">
+        <div id="progress" class="progress-area" hidden></div>
+        <div class="controls-row">
+          <div class="test-split"><button class="test-main" data-action="test-real"><span id="test-icon"></span><span>تست</span><span class="test-count" id="test-count"></span></button><button class="test-options" data-action="test-options" aria-label="گزینه‌های بیشتر تست"><span class="chevron"></span></button></div>
+          <button class="sort-trigger" data-action="sort" aria-label="مرتب‌سازی نمایشی"></button>
+          <div class="filter-scroll" role="group" aria-label="فیلتر نتایج" id="filters"></div>
+        </div>
+      </div>
+      <div class="list-heading"><span>لیست سرورها</span><span id="visible-label"></span></div>
+      <section class="server-list" id="server-list" aria-label="سرورها" tabindex="0"></section>
+      <footer class="bottom-area"><div class="connection-pill"><button class="connection-details" data-action="connection-details"><span class="connection-dot" id="connection-dot"></span><span id="connection-label">قطع است · نیاز به تست</span></button><button class="power" data-action="toggle-connection" aria-label="اتصال"></button></div></footer>
+    </section>
+  </main>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="sheet-handle"></div><div class="modal-content" id="modal-content"></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
