@@ -86,6 +86,11 @@ jobs:
           grep -E '^(e: |error: |Execution failed for task|[[:space:]]*> )' "$RUNNER_TEMP/gradle-spatial.log" | head -40 | while IFS= read -r line; do
             echo "::error::$line"
           done
+          # Preserve the wrapper/dependency error in check annotations as well, since CI log
+          # downloads are not always accessible; this debug step is not passed signing secrets.
+          tail -n 40 "$RUNNER_TEMP/gradle-spatial.log" | while IFS= read -r line; do
+            echo "::error::$line"
+          done
           exit "$result"
         fi
 
