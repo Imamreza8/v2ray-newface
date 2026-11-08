@@ -75,13 +75,35 @@ jobs:
 
     - name: Test and build arm64 debug APK
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         cd "${{ github.workspace }}/V2rayNG"
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
-        # The services.gradle.org redirect to GitHub can return 504; use Gradle's direct
-        # official distribution host for the same wrapper version in this CI checkout.
-        sed -i 's#services.gradle.org/distributions/#downloads.gradle.org/distributions/#' gradle/wrapper/gradle-wrapper.properties
         chmod 755 gradlew
+        # The Gradle URL currently redirects to a GitHub endpoint returning 504 on runners.
+        # Fetch the same public release asset through the GitHub API and verify its published
+        # SHA-256; this only changes the wrapper URL inside the disposable CI checkout.
+        distribution=$(sed -n 's#^distributionUrl=.*\(/gradle-[0-9.]*-bin.zip\)$#\1#p' gradle/wrapper/gradle-wrapper.properties)
+        distribution=${distribution#/}
+        version=${distribution#gradle-}
+        version=${version%-bin.zip}
+        if [[ ! "$distribution" =~ ^gradle-[0-9.]+-bin\.zip$ ]]; then
+          echo '::error::Unexpected Gradle wrapper distribution URL'
+          exit 1
+        fi
+        asset=$(gh api "repos/gradle/gradle-distributions/releases/tags/v${version}" --jq ".assets[] | select(.name == \"$distribution\") | [.id, .digest] | @tsv")
+        unset GH_TOKEN
+        IFS=$'\t' read -r asset_id digest <<< "$asset"
+        if [[ ! "$asset_id" =~ ^[0-9]+$ || ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+          echo '::error::Gradle release asset or SHA-256 unavailable'
+          exit 1
+        fi
+        curl --fail --location --retry 3 -H 'Accept: application/octet-stream' \
+          "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/$asset_id" -o "$RUNNER_TEMP/gradle-distribution.zip"
+        echo "${digest#sha256:}  $RUNNER_TEMP/gradle-distribution.zip" | sha256sum --check
+        sed -i '/^distributionUrl=/d' gradle/wrapper/gradle-wrapper.properties
+        printf 'distributionUrl=file\\:%s\n' "$RUNNER_TEMP/gradle-distribution.zip" >> gradle/wrapper/gradle-wrapper.properties
         set +e
         ./gradlew :app:testFdroidDebugUnitTest :app:assembleFdroidDebug -PABI_FILTERS=arm64-v8a 2>&1 | tee "$RUNNER_TEMP/gradle-spatial.log"
         result=${PIPESTATUS[0]}
