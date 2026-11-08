@@ -175,6 +175,7 @@ fun MoreMenuDialog(
     displaySort: ServerDisplaySort,
     onSort: (ServerDisplaySort) -> Unit,
     onSearch: () -> Unit,
+    onShowConnectionBar: () -> Unit,
     onSelected: (MainMoreMenuAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -235,6 +236,11 @@ fun MoreMenuDialog(
                 text = { Text(stringResource(R.string.menu_item_search)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = null) },
                 onClick = onSearch,
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.show_connection_bar)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_power_spatial_24dp), contentDescription = null) },
+                onClick = onShowConnectionBar,
             )
             secondaryToolActions().forEach { action ->
                 DropdownMenuItem(

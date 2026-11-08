@@ -7,6 +7,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
@@ -20,10 +22,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,6 +38,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -258,6 +264,9 @@ fun MainScreen(
             onAction = onAction,
         )
         val connectionBarHaze = rememberHazeState()
+        var footerHeightPx by remember { mutableIntStateOf(0) }
+        var requestedConnectionBar by remember { mutableStateOf(false) }
+        val navigationInsetPx = WindowInsets.navigationBars.getBottom(LocalDensity.current)
         Box(modifier = Modifier.fillMaxSize()) {
         // Use the actual active pager page, not a row index, to observe only its list/grid.
         val activeGroupId = groups.getOrNull(pagerState.currentPage)?.id
@@ -265,6 +274,30 @@ fun MainScreen(
             activeGroupId?.let { lazyGridStates[it]?.isScrollInProgress } == true
         } else {
             activeGroupId?.let { lazyListStates[it]?.isScrollInProgress } == true
+        }
+        LaunchedEffect(activeGroupId) { requestedConnectionBar = false }
+        LaunchedEffect(serverListScrolling, pagerState.isScrollInProgress) {
+            if (serverListScrolling || pagerState.isScrollInProgress) requestedConnectionBar = false
+        }
+        val barOverlapPx = (footerHeightPx - navigationInsetPx).coerceAtLeast(0)
+        val lastRowCovered by remember(activeGroupId, doubleColumnDisplay, barOverlapPx) {
+            derivedStateOf {
+                if (doubleColumnDisplay) {
+                    activeGroupId?.let { lazyGridStates[it] }?.layoutInfo?.let { info ->
+                        val last = info.visibleItemsInfo.firstOrNull { it.index == info.totalItemsCount - 1 }
+                        val bottom = last?.let { cell ->
+                            info.visibleItemsInfo.filter { it.row == cell.row }
+                                .maxOfOrNull { it.offset.y + it.size.height }
+                        }
+                        lastRowCoveredByBar(bottom, info.viewportEndOffset, barOverlapPx)
+                    } ?: false
+                } else {
+                    activeGroupId?.let { lazyListStates[it] }?.layoutInfo?.let { info ->
+                        val last = info.visibleItemsInfo.firstOrNull { it.index == info.totalItemsCount - 1 }
+                        lastRowCoveredByBar(last?.let { it.offset + it.size }, info.viewportEndOffset, barOverlapPx)
+                    } ?: false
+                }
+            }
         }
         // Capture both backdrop and server list, but not the floating bar itself.
         Box(modifier = Modifier.fillMaxSize().hazeSource(connectionBarHaze)) {
@@ -301,6 +334,7 @@ fun MainScreen(
                         showSearch = false
                     },
                     onSearchToggle = { show: Boolean -> showSearch = show },
+                    onShowConnectionBar = { requestedConnectionBar = true },
                     onMenuClick = { scope.launch { drawerState.open() } },
                     groupSelector = {
                         GroupSelectorTrigger(groups, uiState.selectedGroupId, mainViewModel) { showGroupChooser = true }
@@ -375,8 +409,7 @@ fun MainScreen(
                                 start = 0.dp,
                                 top = 0.dp,
                                 end = 0.dp,
-                                // Keep the last row reachable above the floating connection bar.
-                                bottom = 80.dp
+                                bottom = 8.dp
                             )
                         )
                     }
@@ -385,7 +418,9 @@ fun MainScreen(
         }
         }
         AnimatedVisibility(
-            visible = connectionBarVisible(pagerState.isScrollInProgress, serverListScrolling),
+            visible = connectionBarVisible(
+                pagerState.isScrollInProgress, serverListScrolling, lastRowCovered, requestedConnectionBar,
+            ),
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
@@ -397,6 +432,7 @@ fun MainScreen(
                 isDarkTheme = isDarkTheme,
                 hazeState = connectionBarHaze,
                 onAction = onAction,
+                modifier = Modifier.onSizeChanged { if (it.height > 0) footerHeightPx = it.height },
             )
         }
         }

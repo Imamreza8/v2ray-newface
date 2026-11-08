@@ -136,4 +136,5 @@
     <string name="export_scope_privacy">Exported links may contain private credentials. Share them only with trusted recipients.</string>
     <string name="recorded_exit_country">Last recorded exit country: %1$s</string>
     <string name="search_clear">Clear search</string>
+    <string name="show_connection_bar">Show connection bar</string>
 </resources>

@@ -135,4 +135,5 @@
     <string name="export_scope_privacy">匯出的連結可能包含私人憑證，請只與信任的人分享。</string>
     <string name="recorded_exit_country">上次結果記錄的出口國家：%1$s</string>
     <string name="search_clear">清除搜尋</string>
+    <string name="show_connection_bar">顯示連線列</string>
 </resources>

@@ -41,6 +41,7 @@ fun MainTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchClose: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
+    onShowConnectionBar: () -> Unit,
     onMenuClick: () -> Unit,
     groupSelector: @Composable () -> Unit,
     onAction: (MainAction) -> Unit,
@@ -74,6 +75,7 @@ fun MainTopBar(
             displaySort = displaySort,
             onSort = { onAction(MainAction.SetDisplaySort(it)) },
             onSearch = { showMenu = false; onSearchToggle(true) },
+            onShowConnectionBar = { showMenu = false; onShowConnectionBar() },
             onSelected = { action -> showMenu = false; onMoreMenuAction(action) },
             onDismiss = { showMenu = false },
         )

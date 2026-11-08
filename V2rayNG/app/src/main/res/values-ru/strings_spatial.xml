@@ -135,4 +135,5 @@
     <string name="export_scope_privacy">Экспортированные ссылки могут содержать секретные данные. Делитесь ими только с теми, кому доверяете.</string>
     <string name="recorded_exit_country">Страна выхода, записанная в последнем результате: %1$s</string>
     <string name="search_clear">Очистить поиск</string>
+    <string name="show_connection_bar">Показать панель подключения</string>
 </resources>

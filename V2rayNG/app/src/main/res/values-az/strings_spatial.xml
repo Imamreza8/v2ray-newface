@@ -135,4 +135,5 @@
     <string name="export_scope_privacy">İxrac edilən keçidlər məxfi giriş məlumatları ehtiva edə bilər. Onları yalnız etibarlı şəxslərlə paylaşın.</string>
     <string name="recorded_exit_country">Son nəticədə qeydə alınan çıxış ölkəsi: %1$s</string>
     <string name="search_clear">Axtarışı təmizlə</string>
+    <string name="show_connection_bar">Bağlantı panelini göstər</string>
 </resources>

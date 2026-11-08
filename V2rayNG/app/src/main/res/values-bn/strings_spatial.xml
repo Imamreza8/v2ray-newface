@@ -135,4 +135,5 @@
     <string name="export_scope_privacy">রপ্তানি করা লিংকে ব্যক্তিগত পরিচয়তথ্য থাকতে পারে। শুধু বিশ্বস্ত ব্যক্তির সঙ্গে শেয়ার করুন।</string>
     <string name="recorded_exit_country">সর্বশেষ ফলে রেকর্ড করা বহির্গমন দেশ: %1$s</string>
     <string name="search_clear">অনুসন্ধান মুছুন</string>
+    <string name="show_connection_bar">সংযোগ বার দেখান</string>
 </resources>

@@ -63,7 +63,8 @@ fun MainBottomBar(
     isRunning: Boolean,
     isDarkTheme: Boolean,
     hazeState: HazeState,
-    onAction: (MainAction) -> Unit
+    onAction: (MainAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
     var showConnectionDetails by rememberSaveable { mutableStateOf(false) }
@@ -100,7 +101,7 @@ fun MainBottomBar(
         if (!isRunning) rotationAnim.snapTo(0f)
     }
     Column(
-        modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)
+        modifier = modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         val shape = RoundedCornerShape(32.dp)
@@ -175,8 +176,16 @@ fun MainBottomBar(
 }
 
 /** Presentation only: scrolling never changes the actual VPN connection. */
-internal fun connectionBarVisible(pageScrolling: Boolean, serverListScrolling: Boolean): Boolean =
-    !pageScrolling && !serverListScrolling
+internal fun connectionBarVisible(
+    pageScrolling: Boolean,
+    serverListScrolling: Boolean,
+    lastRowCovered: Boolean = false,
+    requestedByUser: Boolean = false,
+): Boolean = !pageScrolling && !serverListScrolling && (!lastRowCovered || requestedByUser)
+
+/** Last row is otherwise untappable once the floating panel reappears at the end of the list. */
+internal fun lastRowCoveredByBar(lastRowBottom: Int?, viewportEnd: Int, barOverlap: Int): Boolean =
+    lastRowBottom != null && barOverlap > 0 && lastRowBottom > viewportEnd - barOverlap
 
 // Shared with the contrast regression test for a white backdrop beneath the blur.
 internal const val CONNECTION_GLASS_TINT_ALPHA = 0.76f
