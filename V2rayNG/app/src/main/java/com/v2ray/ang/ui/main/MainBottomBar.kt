@@ -34,6 +34,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -94,11 +96,14 @@ fun MainBottomBar(
             .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         val shape = RoundedCornerShape(32.dp)
+        val glass = Brush.verticalGradient(listOf(
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.92f),
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        ))
         Row(
-            modifier = Modifier.fillMaxWidth().background(
-                if (LocalSpatialTheme.current) MaterialTheme.colorScheme.surfaceContainer
-                else MaterialTheme.colorScheme.surface, shape,
-            ).border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+            modifier = Modifier.fillMaxWidth().shadow(10.dp, shape, clip = false)
+                .background(glass, shape)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), shape)
                 .heightIn(min = 56.dp).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -143,3 +148,7 @@ fun MainBottomBar(
         }
     }
 }
+
+/** Presentation only: scrolling never changes the actual VPN connection. */
+internal fun connectionBarVisible(pageScrolling: Boolean, serverListScrolling: Boolean): Boolean =
+    !pageScrolling && !serverListScrolling

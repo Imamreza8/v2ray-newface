@@ -32,6 +32,9 @@ import com.v2ray.ang.ui.compose.verticalScrollbar
 fun MainTopBar(
     isLoading: Boolean,
     displaySort: ServerDisplaySort,
+    isTesting: Boolean,
+    testEnabled: Boolean,
+    visibleTestCount: Int?,
     showSearch: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
@@ -45,6 +48,7 @@ fun MainTopBar(
     var showImportMenu by remember { mutableStateOf(false) }
     var showManualImport by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showTestOptions by remember { mutableStateOf(false) }
     val importMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -53,10 +57,22 @@ fun MainTopBar(
     if (showManualImport) {
         ManualImportDialog(onAction = onAction, onDismiss = { showManualImport = false })
     }
+    if (showTestOptions) {
+        TestOptionsSheet(
+            enabled = !isTesting,
+            visibleTestCount = visibleTestCount,
+            onChoose = { kind ->
+                showTestOptions = false
+                onAction(MainAction.PrepareScopedTest(kind))
+            },
+            onDismiss = { showTestOptions = false },
+        )
+    }
     if (showMenu) {
         MoreMenuDialog(
             displaySort = displaySort,
             onSort = { onAction(MainAction.SetDisplaySort(it)) },
+            onSearch = { showMenu = false; onSearchToggle(true) },
             onSelected = { action -> showMenu = false; onMoreMenuAction(action) },
             onDismiss = { showMenu = false },
         )
@@ -85,15 +101,12 @@ fun MainTopBar(
             }
         },
         actions = {
-            if (!showSearch) {
-                IconButton(onClick = { onSearchToggle(true) }) {
-                    Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
-                }
-            }
-            IconButton(onClick = { onAction(MainAction.LocateSelectedServer) }) {
+            IconButton(onClick = { showTestOptions = true }, enabled = testEnabled && !isTesting) {
                 Icon(
-                    painterResource(R.drawable.ic_locate_selected_24dp),
-                    contentDescription = stringResource(R.string.title_locate_selected_config),
+                    painterResource(R.drawable.ic_flash_on_24dp),
+                    contentDescription = stringResource(R.string.scoped_test_options),
+                    tint = if (testEnabled && !isTesting) MaterialTheme.colorScheme.tertiary
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 )
             }
             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {

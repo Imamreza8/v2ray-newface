@@ -134,4 +134,5 @@
     <string name="scoped_test_count">اختبار · %1$d</string>
     <string name="export_scope_privacy">قد تحتوي الروابط المصدّرة على بيانات اعتماد خاصة. شاركها فقط مع جهات موثوقة.</string>
     <string name="recorded_exit_country">بلد الخروج المسجل في آخر نتيجة: %1$s</string>
+    <string name="search_clear">مسح البحث</string>
 </resources>

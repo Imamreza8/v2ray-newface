@@ -134,4 +134,5 @@
     <string name="scoped_test_count">Kiểm tra · %1$d</string>
     <string name="export_scope_privacy">Liên kết xuất ra có thể chứa thông tin đăng nhập riêng tư. Chỉ chia sẻ với người tin cậy.</string>
     <string name="recorded_exit_country">Quốc gia đầu ra được ghi trong kết quả gần nhất: %1$s</string>
+    <string name="search_clear">Xóa tìm kiếm</string>
 </resources>

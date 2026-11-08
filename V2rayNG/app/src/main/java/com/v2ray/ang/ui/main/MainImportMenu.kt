@@ -174,6 +174,7 @@ internal fun secondaryToolActions(): List<MainMoreMenuAction> = listOf(
 fun MoreMenuDialog(
     displaySort: ServerDisplaySort,
     onSort: (ServerDisplaySort) -> Unit,
+    onSearch: () -> Unit,
     onSelected: (MainMoreMenuAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -230,6 +231,11 @@ fun MoreMenuDialog(
                     }
                 }
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_item_search)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = null) },
+                onClick = onSearch,
+            )
             secondaryToolActions().forEach { action ->
                 DropdownMenuItem(
                     text = { Text(stringResource(action.labelRes)) },

@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -53,22 +51,10 @@ import com.v2ray.ang.R
 @Composable
 internal fun ServerListChrome(
     uiState: MainUiState,
-    visibleTestCount: Int?,
     controlsExpanded: Boolean,
     onToggleControls: () -> Unit,
     onAction: (MainAction) -> Unit,
 ) {
-    var showTestOptions by rememberSaveable { mutableStateOf(false) }
-    if (showTestOptions) {
-        TestOptionsSheet(
-            enabled = !uiState.isTesting,
-            onChoose = { kind ->
-                showTestOptions = false
-                onAction(MainAction.PrepareScopedTest(kind))
-            },
-            onDismiss = { showTestOptions = false },
-        )
-    }
     uiState.scopedTestProposal?.let { proposal ->
         ScopedTestConfirmDialog(
             proposal = proposal,
@@ -78,37 +64,6 @@ internal fun ServerListChrome(
     }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                modifier = Modifier.clip(RoundedCornerShape(24.dp))
-                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = if (uiState.isTesting) 0.25f else 0.95f)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(
-                    onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
-                    enabled = !uiState.isTesting,
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.onTertiary,
-                    ),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                ) {
-                    Icon(painterResource(R.drawable.ic_flash_on_24dp), contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        if (visibleTestCount == null) stringResource(R.string.scoped_test)
-                        else stringResource(R.string.scoped_test_count, visibleTestCount),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                IconButton(onClick = { showTestOptions = true }, enabled = !uiState.isTesting) {
-                    Icon(
-                        painterResource(R.drawable.ic_expand_more_24dp),
-                        contentDescription = stringResource(R.string.scoped_test_options),
-                        tint = MaterialTheme.colorScheme.onTertiary,
-                    )
-                }
-            }
             DisplaySortMenu(
                 selected = uiState.displaySort,
                 onSelect = { onAction(MainAction.SetDisplaySort(it)) },
@@ -212,7 +167,12 @@ private fun FilterChipItem(selected: Boolean, label: String, onClick: () -> Unit
 // equivalent is available. ScopedTestRequestsTest covers the selection/confirmation contract.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TestOptionsSheet(enabled: Boolean, onChoose: (ScopedTestKind) -> Unit, onDismiss: () -> Unit) {
+internal fun TestOptionsSheet(
+    enabled: Boolean,
+    visibleTestCount: Int?,
+    onChoose: (ScopedTestKind) -> Unit,
+    onDismiss: () -> Unit,
+) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
@@ -225,7 +185,13 @@ private fun TestOptionsSheet(enabled: Boolean, onChoose: (ScopedTestKind) -> Uni
                     enabled = enabled,
                     onClick = { onChoose(kind) },
                 ) {
-                    Text(stringResource(scopedTestLabel(kind)), modifier = Modifier.fillMaxWidth())
+                    Column(Modifier.fillMaxWidth()) {
+                        Text(stringResource(scopedTestLabel(kind)))
+                        if (kind == ScopedTestKind.REAL && visibleTestCount != null) {
+                            Text(stringResource(R.string.scoped_test_count, visibleTestCount),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
             }
         }

@@ -1,5 +1,10 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -224,6 +230,11 @@ fun MainScreen(
             )
         } else {
         BackHandler { showFullList = false }
+        BackHandler(enabled = showSearch) {
+            searchQuery = ""
+            onAction(MainAction.Search(""))
+            showSearch = false
+        }
         GroupSelector(
             groups = groups,
             selectedGroupId = uiState.selectedGroupId,
@@ -246,6 +257,20 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()) {
         // Same space backdrop as the home screen, so the list screen no longer looks like another app
         SpatialBackground()
+        // Use the actual active pager page, not a row index, to observe only its list/grid.
+        val activeGroupId = groups.getOrNull(pagerState.currentPage)?.id
+        val serverListScrolling = if (doubleColumnDisplay) {
+            activeGroupId?.let { lazyGridStates[it]?.isScrollInProgress } == true
+        } else {
+            activeGroupId?.let { lazyListStates[it]?.isScrollInProgress } == true
+        }
+        val visibleTestCount = if (groups.isNotEmpty()) key(uiState.selectedGroupId) {
+            val selectedGroupFlow = remember(uiState.selectedGroupId) {
+                mainViewModel.serverGroupState(uiState.selectedGroupId)
+            }
+            val selectedGroupState by selectedGroupFlow.collectAsStateWithLifecycle()
+            visibleScopedTestCount(selectedGroupState, searchQuery, uiState.statusFilter, uiState.displaySort)
+        } else null
         Scaffold(
             containerColor = Color.Transparent,
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -253,6 +278,9 @@ fun MainScreen(
                 MainTopBar(
                     isLoading = isLoading,
                     displaySort = uiState.displaySort,
+                    isTesting = uiState.isTesting,
+                    testEnabled = groups.isNotEmpty(),
+                    visibleTestCount = visibleTestCount,
                     showSearch = showSearch,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { query: String ->
@@ -287,15 +315,6 @@ fun MainScreen(
                     }
                 )
             },
-            bottomBar = {
-                MainBottomBar(
-                    displayText = bottomText,
-                    connectionStatus = uiState.connectionStatus,
-                    isRunning = isRunning,
-                    isDarkTheme = isDarkTheme,
-                    onAction = onAction
-                )
-            },
             floatingActionButton = {},
         ) { innerPadding ->
             if (groups.isNotEmpty()) {
@@ -308,17 +327,8 @@ fun MainScreen(
                     if (controlsExpanded) GroupSubscriptionSummary(groups, uiState.selectedGroupId) {
                         showSubscriptionDetails = true
                     }
-                    // Reset the flow's collected value on group changes; never show the old group's count.
-                    val visibleTestCount = key(uiState.selectedGroupId) {
-                        val selectedGroupFlow = remember(uiState.selectedGroupId) {
-                            mainViewModel.serverGroupState(uiState.selectedGroupId)
-                        }
-                        val selectedGroupState by selectedGroupFlow.collectAsStateWithLifecycle()
-                        visibleScopedTestCount(selectedGroupState, searchQuery, uiState.statusFilter, uiState.displaySort)
-                    }
                     ServerListChrome(
                         uiState = uiState,
-                        visibleTestCount = visibleTestCount,
                         controlsExpanded = controlsExpanded,
                         onToggleControls = { controlsExpanded = !controlsExpanded },
                         onAction = onAction,
@@ -357,12 +367,27 @@ fun MainScreen(
                                 start = 0.dp,
                                 top = 0.dp,
                                 end = 0.dp,
-                                bottom = 8.dp
+                                // Keep the last row reachable above the floating connection bar.
+                                bottom = 80.dp
                             )
                         )
                     }
                 }
             }
+        }
+        AnimatedVisibility(
+            visible = connectionBarVisible(pagerState.isScrollInProgress, serverListScrolling),
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it },
+        ) {
+            MainBottomBar(
+                displayText = bottomText,
+                connectionStatus = uiState.connectionStatus,
+                isRunning = isRunning,
+                isDarkTheme = isDarkTheme,
+                onAction = onAction,
+            )
         }
         }
         }
