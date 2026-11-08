@@ -133,4 +133,5 @@
     <string name="bulk_delete_legacy_warning">هشدار: محدوده ممکن است تا زمان تأیید تغییر کند و خطا می‌تواند حذف را ناقص بگذارد. پیش از حذف از داده‌ها پشتیبان بگیرید.</string>
     <string name="scoped_test_count">تست · %1$d</string>
     <string name="export_scope_privacy">لینک‌های خروجی ممکن است شامل اطلاعات محرمانه باشند. آن‌ها را فقط با افراد مورد اعتماد به اشتراک بگذارید.</string>
+    <string name="recorded_exit_country">کشور خروجی ثبت‌شده در آخرین نتیجه: %1$s</string>
 </resources>

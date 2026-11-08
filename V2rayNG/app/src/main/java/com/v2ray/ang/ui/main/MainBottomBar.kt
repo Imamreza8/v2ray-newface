@@ -125,14 +125,18 @@ fun MainBottomBar(
                     onAction(MainAction.ToggleService)
                 },
                 modifier = Modifier.size(48.dp),
-                containerColor = if (isRunning) colorFabActive
+                containerColor = if (LocalSpatialTheme.current && isRunning) MaterialTheme.colorScheme.tertiary
+                else if (isRunning) colorFabActive
                 else if (isDarkTheme) colorFabInactiveDark
                 else colorFabInactiveLight,
             ) {
                 Icon(
-                    painter = painterResource(if (isRunning) R.drawable.ic_stop_24dp else R.drawable.ic_play_24dp),
+                    painter = painterResource(
+                        if (LocalSpatialTheme.current) R.drawable.ic_power_spatial_24dp
+                        else if (isRunning) R.drawable.ic_stop_24dp else R.drawable.ic_play_24dp
+                    ),
                     contentDescription = stringResource(if (isRunning) R.string.acc_stop else R.string.acc_start),
-                    tint = Color.White,
+                    tint = if (LocalSpatialTheme.current && isRunning) MaterialTheme.colorScheme.onTertiary else Color.White,
                     modifier = Modifier.size(24.dp).graphicsLayer { rotationZ = rotationAnim.value },
                 )
             }

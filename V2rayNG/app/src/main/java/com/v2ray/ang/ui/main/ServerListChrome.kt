@@ -77,51 +77,37 @@ internal fun ServerListChrome(
         )
     }
     Column(modifier = Modifier.fillMaxWidth()) {
-        val stats = uiState.runStats
-        if (uiState.isTesting && stats.total > stats.done) {
-            TestProgressStrip(stats = stats, onCancel = { onAction(MainAction.CancelTesting) })
-        } else if (uiState.resumableCount > 0) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = { onAction(MainAction.ResumeTesting) }) {
-                    Text(stringResource(R.string.spatial_resume, uiState.resumableCount))
-                }
-            }
-        }
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(
-                onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
-                enabled = !uiState.isTesting,
-                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ),
-                contentPadding = PaddingValues(horizontal = 8.dp),
+            Row(
+                modifier = Modifier.clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = if (uiState.isTesting) 0.25f else 0.95f)),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(painterResource(R.drawable.ic_flash_on_24dp), contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    if (visibleTestCount == null) stringResource(R.string.scoped_test)
-                    else stringResource(R.string.scoped_test_count, visibleTestCount),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            IconButton(onClick = { showTestOptions = true }, enabled = !uiState.isTesting) {
-                Icon(
-                    painterResource(R.drawable.ic_expand_more_24dp),
-                    contentDescription = stringResource(R.string.scoped_test_options),
-                )
+                TextButton(
+                    onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
+                    enabled = !uiState.isTesting,
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_flash_on_24dp), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (visibleTestCount == null) stringResource(R.string.scoped_test)
+                        else stringResource(R.string.scoped_test_count, visibleTestCount),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                IconButton(onClick = { showTestOptions = true }, enabled = !uiState.isTesting) {
+                    Icon(
+                        painterResource(R.drawable.ic_expand_more_24dp),
+                        contentDescription = stringResource(R.string.scoped_test_options),
+                        tint = MaterialTheme.colorScheme.onTertiary,
+                    )
+                }
             }
             DisplaySortMenu(
                 selected = uiState.displaySort,
@@ -143,6 +129,27 @@ internal fun ServerListChrome(
                     contentDescription = stringResource(if (controlsExpanded) R.string.controls_hide else R.string.controls_show),
                     modifier = Modifier.graphicsLayer { rotationZ = if (controlsExpanded) 180f else 0f },
                 )
+            }
+        }
+        val stats = uiState.runStats
+        if (uiState.isTesting && stats.total > stats.done) {
+            TestProgressStrip(stats = stats, onCancel = { onAction(MainAction.CancelTesting) })
+        } else if (uiState.resumableCount > 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onAction(MainAction.ResumeTesting) }) {
+                    Text(stringResource(R.string.spatial_resume, uiState.resumableCount))
+                }
             }
         }
     }
@@ -271,7 +278,7 @@ private fun scopedTestLabel(kind: ScopedTestKind): Int = when (kind) {
 }
 
 @Composable
-private fun DisplaySortMenu(selected: ServerDisplaySort, onSelect: (ServerDisplaySort) -> Unit) {
+internal fun DisplaySortMenu(selected: ServerDisplaySort, onSelect: (ServerDisplaySort) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {

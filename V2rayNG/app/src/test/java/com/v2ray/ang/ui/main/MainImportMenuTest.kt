@@ -88,4 +88,13 @@ class MainImportMenuTest {
         assertEquals(true, MainMoreMenuAction.LocateSelected in visible)
     }
 
+    @Test
+    fun redesignedSheetKeepsEveryVisibleOperationExactlyOnce() {
+        val rendered = primaryToolActions() + secondaryToolActions() +
+            MainMoreMenuAction.SortByTestResults + visibleToolActions(ToolCategory.DELETE)
+        val expected = ToolCategory.entries.flatMap(::visibleToolActions)
+        assertEquals(rendered.size, rendered.toSet().size)
+        assertEquals(expected.toSet(), rendered.toSet())
+    }
+
 }

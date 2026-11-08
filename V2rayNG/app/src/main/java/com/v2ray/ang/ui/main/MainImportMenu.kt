@@ -25,6 +25,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
@@ -161,64 +163,97 @@ internal fun primaryToolActions(): List<MainMoreMenuAction> = listOf(
     MainMoreMenuAction.UpdateSubscriptions, MainMoreMenuAction.ExportAll, MainMoreMenuAction.RestartService,
 )
 
+internal fun secondaryToolActions(): List<MainMoreMenuAction> = listOf(
+    MainMoreMenuAction.GroupDetails, MainMoreMenuAction.LocateSelected,
+)
+
 // ModalBottomSheet is experimental in the pinned Material 3 version; reevaluate when its stable
 // equivalent is available. MainImportMenuTest covers tool routing and category membership.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoreMenuDialog(onSelected: (MainMoreMenuAction) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+fun MoreMenuDialog(
+    displaySort: ServerDisplaySort,
+    onSort: (ServerDisplaySort) -> Unit,
+    onSelected: (MainMoreMenuAction) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .navigationBarsPadding().padding(horizontal = 16.dp),
         ) {
-            Text(stringResource(R.string.acc_more), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.acc_more), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 primaryToolActions().forEach { action ->
-                    val icon = when (action) {
-                        MainMoreMenuAction.UpdateSubscriptions -> R.drawable.ic_cloud_download_24dp
-                        MainMoreMenuAction.ExportAll -> R.drawable.ic_share_24dp
-                        else -> R.drawable.ic_refresh_24dp
+                    val (icon, accent) = when (action) {
+                        MainMoreMenuAction.UpdateSubscriptions -> R.drawable.ic_cloud_download_24dp to MaterialTheme.colorScheme.tertiary
+                        MainMoreMenuAction.ExportAll -> R.drawable.ic_share_24dp to MaterialTheme.colorScheme.primary
+                        else -> R.drawable.ic_power_spatial_24dp to androidx.compose.ui.graphics.Color(0xFFFFC569)
                     }
                     OutlinedButton(
                         onClick = { onSelected(action) },
                         modifier = Modifier.weight(1f).heightIn(min = 96.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, accent.copy(alpha = 0.8f)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = accent.copy(alpha = 0.10f)),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
+                            Icon(painterResource(icon), contentDescription = null, tint = accent, modifier = Modifier.size(28.dp))
                             Spacer(Modifier.height(6.dp))
                             Text(stringResource(action.labelRes), textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.labelMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
             }
-            ToolCategory.entries.forEach { category ->
-                val actions = visibleToolActions(category).filterNot { it in primaryToolActions() }
-                if (actions.isNotEmpty()) key(category) {
-                    val danger = category == ToolCategory.DELETE
-                    val shape = RoundedCornerShape(18.dp)
-                    Column(
-                        Modifier.fillMaxWidth().padding(top = 12.dp)
-                            .then(if (danger) Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f), shape)
-                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f), shape) else Modifier)
-                    ) {
-                        Text(
-                            stringResource(category.labelRes),
-                            modifier = Modifier.padding(start = 16.dp, top = 12.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            val orderShape = RoundedCornerShape(18.dp)
+            Column(
+                Modifier.fillMaxWidth().padding(top = 16.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, orderShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, orderShape)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(stringResource(R.string.save_order_title), style = MaterialTheme.typography.titleSmall)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.display_sort), modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall)
+                    DisplaySortMenu(selected = displaySort, onSelect = onSort)
+                    TextButton(onClick = { onSelected(MainMoreMenuAction.SortByTestResults) }) {
+                        Text(stringResource(R.string.routing_settings_save))
+                    }
+                }
+            }
+            secondaryToolActions().forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(action.labelRes)) },
+                    onClick = { onSelected(action) },
+                )
+            }
+            val shape = RoundedCornerShape(18.dp)
+            Column(
+                Modifier.fillMaxWidth().padding(top = 12.dp)
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f), shape)
+                    .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f), shape),
+            ) {
+                Text(
+                    stringResource(ToolCategory.DELETE.labelRes),
+                    modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                visibleToolActions(ToolCategory.DELETE).forEach { action ->
+                    key(action) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(action.labelRes), color = MaterialTheme.colorScheme.error) },
+                            onClick = { onSelected(action) },
                         )
-                        actions.forEach { action ->
-                            key(action) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(action.labelRes),
-                                        color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) },
-                                    onClick = { onSelected(action) },
-                                )
-                            }
-                        }
                     }
                 }
             }

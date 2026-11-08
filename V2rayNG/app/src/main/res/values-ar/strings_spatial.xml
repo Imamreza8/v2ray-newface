@@ -133,4 +133,5 @@
     <string name="bulk_delete_legacy_warning">تحذير: قد يتغير النطاق أثناء فتح هذه النافذة، وقد يؤدي خطأ إلى حذف غير مكتمل. انسخ بياناتك احتياطيًا قبل الحذف.</string>
     <string name="scoped_test_count">اختبار · %1$d</string>
     <string name="export_scope_privacy">قد تحتوي الروابط المصدّرة على بيانات اعتماد خاصة. شاركها فقط مع جهات موثوقة.</string>
+    <string name="recorded_exit_country">بلد الخروج المسجل في آخر نتيجة: %1$s</string>
 </resources>

@@ -481,7 +481,8 @@ class MainViewModel(
                 guid = guid,
                 profile = profile.copy(),
                 testDelayMillis = affiliation?.testDelayMillis ?: 0L,
-                testTime = affiliation?.testTime ?: 0L
+                testTime = affiliation?.testTime ?: 0L,
+                exitCountry = affiliation?.exitCountry,
             )
         }
 

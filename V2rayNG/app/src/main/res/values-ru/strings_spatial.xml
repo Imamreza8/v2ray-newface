@@ -133,4 +133,5 @@
     <string name="bulk_delete_legacy_warning">Предупреждение: пока открыто окно, состав выбранных профилей может измениться, а ошибка может прервать удаление. Перед удалением сохраните резервную копию.</string>
     <string name="scoped_test_count">Проверить · %1$d</string>
     <string name="export_scope_privacy">Экспортированные ссылки могут содержать секретные данные. Делитесь ими только с теми, кому доверяете.</string>
+    <string name="recorded_exit_country">Страна выхода, записанная в последнем результате: %1$s</string>
 </resources>

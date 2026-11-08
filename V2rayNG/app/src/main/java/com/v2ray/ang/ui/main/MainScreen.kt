@@ -252,6 +252,7 @@ fun MainScreen(
             topBar = {
                 MainTopBar(
                     isLoading = isLoading,
+                    displaySort = uiState.displaySort,
                     showSearch = showSearch,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { query: String ->

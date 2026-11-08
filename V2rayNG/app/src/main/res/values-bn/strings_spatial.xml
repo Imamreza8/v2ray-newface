@@ -133,4 +133,5 @@
     <string name="bulk_delete_legacy_warning">সতর্কতা: এই ডায়ালগ খোলা থাকাকালে লক্ষ্য পরিবর্তিত হতে পারে এবং ত্রুটিতে মুছে ফেলা অসম্পূর্ণ থাকতে পারে। মুছে ফেলার আগে তথ্যের ব্যাকআপ নিন।</string>
     <string name="scoped_test_count">পরীক্ষা · %1$d</string>
     <string name="export_scope_privacy">রপ্তানি করা লিংকে ব্যক্তিগত পরিচয়তথ্য থাকতে পারে। শুধু বিশ্বস্ত ব্যক্তির সঙ্গে শেয়ার করুন।</string>
+    <string name="recorded_exit_country">সর্বশেষ ফলে রেকর্ড করা বহির্গমন দেশ: %1$s</string>
 </resources>

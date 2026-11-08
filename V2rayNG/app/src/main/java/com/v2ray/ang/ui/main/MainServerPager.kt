@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.handler.TopConfigManager
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import com.v2ray.ang.ui.compose.ReorderableGridItem
@@ -350,7 +351,7 @@ private fun ServerListItem(
         null
     }
     val spatial = LocalSpatialTheme.current
-    val cardShape = RoundedCornerShape(18.dp)
+    val cardShape = RoundedCornerShape(12.dp)
     val cardModifier = if (spatial) {
         Modifier
             .padding(horizontal = 12.dp, vertical = 2.dp)
@@ -397,6 +398,14 @@ private fun ServerListItem(
             }
         }
 
+        row.exitCountry?.let { country ->
+            val accessible = stringResource(R.string.recorded_exit_country, country)
+            Text(
+                text = TopConfigManager.flagEmoji(country),
+                fontSize = 24.sp,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = accessible },
+            )
+        }
         Column(
             Modifier
                 .weight(1f)
@@ -487,13 +496,14 @@ private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
         }
     }
     val spoken = if (ageAccessible == null) label else stringResource(R.string.result_age_accessible, label, ageAccessible)
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(20.dp)
     Column(
         modifier = Modifier
             .width(56.dp)
             .clearAndSetSemantics { contentDescription = spoken }
             .clip(shape)
             .background(color.copy(alpha = if (stale) 0.08f else 0.16f))
+            .border(1.dp, color.copy(alpha = if (stale) 0.25f else 0.65f), shape)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

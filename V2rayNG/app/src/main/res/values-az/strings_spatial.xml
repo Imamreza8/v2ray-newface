@@ -133,4 +133,5 @@
     <string name="bulk_delete_legacy_warning">Xəbərdarlıq: bu pəncərə açıqkən əhatə dəyişə bilər və xəta silməni yarımçıq qoya bilər. Silməzdən əvvəl məlumatların ehtiyat nüsxəsini yaradın.</string>
     <string name="scoped_test_count">Yoxla · %1$d</string>
     <string name="export_scope_privacy">İxrac edilən keçidlər məxfi giriş məlumatları ehtiva edə bilər. Onları yalnız etibarlı şəxslərlə paylaşın.</string>
+    <string name="recorded_exit_country">Son nəticədə qeydə alınan çıxış ölkəsi: %1$s</string>
 </resources>

@@ -5,6 +5,8 @@ import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.handler.AngConfigManager
+import com.v2ray.ang.handler.TopConfigManager
+import java.util.Locale
 
 internal data class ServerRowUiModel(
     val guid: String,
@@ -16,6 +18,8 @@ internal data class ServerRowUiModel(
     /** When [testDelayMillis] was measured (0 = unknown); the list marks old results. */
     val testTime: Long,
     val subscriptionBadge: String,
+    /** Last recorded exit country, if present and a known ISO region. */
+    val exitCountry: String? = null,
 )
 
 internal data class ServerGroupUiState(
@@ -48,8 +52,15 @@ internal fun buildServerRowUiModel(
         testDelayMillis = server.testDelayMillis,
         testTime = server.testTime,
         subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
+        exitCountry = validRecordedExitCountry(server.exitCountry),
     )
 }
+
+private val isoRegions: Set<String> by lazy { Locale.getISOCountries().toSet() }
+
+/** A saved exit code is historical metadata, never inferred from a name or hostname. */
+internal fun validRecordedExitCountry(raw: String?): String? =
+    TopConfigManager.normalizeCountryCode(raw)?.takeIf { it in isoRegions }
 
 private fun serverProtocolDescription(profile: ProfileItem): String {
     if (profile.configType.isComplexType()) return profile.configType.name
