@@ -2,6 +2,14 @@ package com.v2ray.ang.ui.main
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -14,9 +22,16 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.v2ray.ang.R
@@ -134,13 +149,17 @@ internal fun toolCategory(action: MainMoreMenuAction): ToolCategory = when (acti
     MainMoreMenuAction.DeleteInvalid -> ToolCategory.DELETE
 }
 
-/** Testing and locating have dedicated controls; do not duplicate them in tools. */
+/** Testing has a dedicated control; locating is available in the tools sheet. */
 internal fun visibleToolActions(category: ToolCategory): List<MainMoreMenuAction> =
     MainMoreMenuAction.entries.filter { action ->
         toolCategory(action) == category && action !in setOf(
-            MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing, MainMoreMenuAction.LocateSelected,
+            MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing,
         )
     }
+
+internal fun primaryToolActions(): List<MainMoreMenuAction> = listOf(
+    MainMoreMenuAction.UpdateSubscriptions, MainMoreMenuAction.ExportAll, MainMoreMenuAction.RestartService,
+)
 
 // ModalBottomSheet is experimental in the pinned Material 3 version; reevaluate when its stable
 // equivalent is available. MainImportMenuTest covers tool routing and category membership.
@@ -153,28 +172,52 @@ fun MoreMenuDialog(onSelected: (MainMoreMenuAction) -> Unit, onDismiss: () -> Un
                 .navigationBarsPadding().padding(horizontal = 16.dp),
         ) {
             Text(stringResource(R.string.acc_more), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                primaryToolActions().forEach { action ->
+                    val icon = when (action) {
+                        MainMoreMenuAction.UpdateSubscriptions -> R.drawable.ic_cloud_download_24dp
+                        MainMoreMenuAction.ExportAll -> R.drawable.ic_share_24dp
+                        else -> R.drawable.ic_refresh_24dp
+                    }
+                    OutlinedButton(
+                        onClick = { onSelected(action) },
+                        modifier = Modifier.weight(1f).heightIn(min = 96.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.height(6.dp))
+                            Text(stringResource(action.labelRes), textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.labelMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
             ToolCategory.entries.forEach { category ->
-                val actions = visibleToolActions(category)
+                val actions = visibleToolActions(category).filterNot { it in primaryToolActions() }
                 if (actions.isNotEmpty()) key(category) {
-                    Text(
-                        stringResource(category.labelRes),
-                        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
-                        style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
-                        color = if (category == ToolCategory.DELETE) androidx.compose.material3.MaterialTheme.colorScheme.error
-                        else androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    )
-                    actions.forEach { action ->
-                        key(action) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(action.labelRes),
-                                        color = if (category == ToolCategory.DELETE) androidx.compose.material3.MaterialTheme.colorScheme.error
-                                        else androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-                                    )
-                                },
-                                onClick = { onSelected(action) },
-                            )
+                    val danger = category == ToolCategory.DELETE
+                    val shape = RoundedCornerShape(18.dp)
+                    Column(
+                        Modifier.fillMaxWidth().padding(top = 12.dp)
+                            .then(if (danger) Modifier.background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f), shape)
+                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f), shape) else Modifier)
+                    ) {
+                        Text(
+                            stringResource(category.labelRes),
+                            modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        )
+                        actions.forEach { action ->
+                            key(action) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(action.labelRes),
+                                        color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) },
+                                    onClick = { onSelected(action) },
+                                )
+                            }
                         }
                     }
                 }

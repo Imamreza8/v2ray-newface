@@ -397,9 +397,6 @@ private fun ServerListItem(
             }
         }
 
-        // Ping badge: the result is the first thing you look for, so it gets its own coloured block
-        PingBadge(delayMillis = row.testDelayMillis, age = age, stale = stale)
-
         Column(
             Modifier
                 .weight(1f)
@@ -444,6 +441,8 @@ private fun ServerListItem(
                 }
             }
         }
+
+        PingBadge(delayMillis = row.testDelayMillis, age = age, stale = stale)
 
         // One tidy "more" button (share, edit, delete live in its menu) instead of three icons per row
         IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(48.dp)) {
@@ -506,7 +505,7 @@ private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (ageShort != null) {
+        if (ageShort != null && shouldShowResultAge(age)) {
             Text(
                 ageShort,
                 color = color.copy(alpha = if (stale) 0.6f else 0.85f),

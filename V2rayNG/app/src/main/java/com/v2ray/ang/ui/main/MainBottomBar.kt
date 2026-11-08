@@ -3,6 +3,8 @@ package com.v2ray.ang.ui.main
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,7 +41,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalSpatialTheme
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
@@ -89,14 +90,16 @@ fun MainBottomBar(
         if (!isRunning) rotationAnim.snapTo(0f)
     }
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (LocalSpatialTheme.current) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface)
-            .windowInsetsPadding(WindowInsets.navigationBars)
+        modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
-        AppDivider()
+        val shape = RoundedCornerShape(32.dp)
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().background(
+                if (LocalSpatialTheme.current) MaterialTheme.colorScheme.surfaceContainer
+                else MaterialTheme.colorScheme.surface, shape,
+            ).border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+                .heightIn(min = 56.dp).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -121,7 +124,7 @@ fun MainBottomBar(
                     }
                     onAction(MainAction.ToggleService)
                 },
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(48.dp),
                 containerColor = if (isRunning) colorFabActive
                 else if (isDarkTheme) colorFabInactiveDark
                 else colorFabInactiveLight,

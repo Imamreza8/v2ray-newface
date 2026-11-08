@@ -69,9 +69,10 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showGroupChooser by rememberSaveable { mutableStateOf(false) }
     var showSubscriptionDetails by rememberSaveable { mutableStateOf(false) }
     var controlsExpanded by rememberSaveable { mutableStateOf(true) }
-    LaunchedEffect(uiState.selectedGroupId) { showSubscriptionDetails = false }
+    LaunchedEffect(uiState.selectedGroupId) { showSubscriptionDetails = false; showGroupChooser = false }
     val listNestedScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -223,6 +224,25 @@ fun MainScreen(
             )
         } else {
         BackHandler { showFullList = false }
+        GroupSelector(
+            groups = groups,
+            selectedGroupId = uiState.selectedGroupId,
+            onSelectGroup = { groupId ->
+                scope.launch {
+                    val target = latestGroups.indexOfFirst { it.id == groupId }
+                    if (target >= 0) {
+                        onAction(MainAction.SelectGroup(groupId))
+                        pagerState.scrollToPage(target)
+                    }
+                }
+            },
+            onManageGroups = { onNavigate(MainDestination.Subscriptions) },
+            showGroups = showGroupChooser,
+            onShowGroups = { showGroupChooser = it },
+            showDetails = showSubscriptionDetails,
+            onShowDetails = { showSubscriptionDetails = it },
+            onAction = onAction,
+        )
         Box(modifier = Modifier.fillMaxSize()) {
         // Same space backdrop as the home screen, so the list screen no longer looks like another app
         SpatialBackground()
@@ -245,6 +265,9 @@ fun MainScreen(
                     },
                     onSearchToggle = { show: Boolean -> showSearch = show },
                     onMenuClick = { scope.launch { drawerState.open() } },
+                    groupSelector = {
+                        GroupSelectorTrigger(groups, uiState.selectedGroupId, mainViewModel) { showGroupChooser = true }
+                    },
                     onAction = onAction,
                     onMoreMenuAction = { action ->
                         when (action) {
@@ -255,7 +278,7 @@ fun MainScreen(
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
                             MainMoreMenuAction.SortByTestResults -> onAction(MainAction.PrepareSaveOrder)
-                            MainMoreMenuAction.GroupDetails -> { controlsExpanded = true; showSubscriptionDetails = true }
+                            MainMoreMenuAction.GroupDetails -> { showSubscriptionDetails = true }
                             MainMoreMenuAction.TestAll -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.TCP))
                             MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL))
                             MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
@@ -281,24 +304,9 @@ fun MainScreen(
                         .padding(innerPadding)
                         .nestedScroll(listNestedScroll)
                 ) {
-                    if (controlsExpanded) GroupSelector(
-                        groups = groups,
-                        selectedGroupId = uiState.selectedGroupId,
-                        mainViewModel = mainViewModel,
-                        onSelectGroup = { groupId ->
-                            scope.launch {
-                                val target = latestGroups.indexOfFirst { it.id == groupId }
-                                if (target >= 0) {
-                                    onAction(MainAction.SelectGroup(groupId))
-                                    pagerState.scrollToPage(target)
-                                }
-                            }
-                        },
-                        onManageGroups = { onNavigate(MainDestination.Subscriptions) },
-                        showDetails = showSubscriptionDetails,
-                        onShowDetails = { showSubscriptionDetails = it },
-                        onAction = onAction,
-                    )
+                    if (controlsExpanded) GroupSubscriptionSummary(groups, uiState.selectedGroupId) {
+                        showSubscriptionDetails = true
+                    }
                     // Reset the flow's collected value on group changes; never show the old group's count.
                     val visibleTestCount = key(uiState.selectedGroupId) {
                         val selectedGroupFlow = remember(uiState.selectedGroupId) {

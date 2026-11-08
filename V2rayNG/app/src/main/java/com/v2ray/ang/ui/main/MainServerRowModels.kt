@@ -76,6 +76,10 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
 internal enum class ResultAgeUnit { UNKNOWN, MINUTES, HOURS, DAYS }
 internal data class ResultAge(val unit: ResultAgeUnit, val value: Long = 0L)
 
+/** Keep the accessible age while avoiding a visually noisy zero-minute badge. */
+internal fun shouldShowResultAge(age: ResultAge?): Boolean =
+    age != null && !(age.unit == ResultAgeUnit.MINUTES && age.value == 0L)
+
 /** No age for untested entries; timestamps from old versions or a future clock are unknown. */
 internal fun serverResultAge(delayMillis: Long, testedAt: Long, now: Long): ResultAge? {
     if (delayMillis == 0L) return null

@@ -6,6 +6,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -98,7 +102,14 @@ internal fun ServerListChrome(
             TextButton(
                 onClick = { onAction(MainAction.PrepareScopedTest(ScopedTestKind.REAL)) },
                 enabled = !uiState.isTesting,
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+                contentPadding = PaddingValues(horizontal = 8.dp),
             ) {
+                Icon(painterResource(R.drawable.ic_flash_on_24dp), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
                     if (visibleTestCount == null) stringResource(R.string.scoped_test)
                     else stringResource(R.string.scoped_test_count, visibleTestCount),
@@ -140,31 +151,26 @@ internal fun ServerListChrome(
 @Composable
 private fun TestProgressStrip(stats: TestRunStats, onCancel: () -> Unit) {
     val fraction = if (stats.total > 0) (stats.done.toFloat() / stats.total).coerceIn(0f, 1f) else 0f
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
-        }
-        // A plain two-box progress bar (no dependency on a particular Material 3 progress API)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .clip(RoundedCornerShape(1.5.dp))
+            modifier = Modifier.weight(0.35f).height(3.dp).clip(RoundedCornerShape(1.5.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.primary),
-            )
+            Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+        }
+        Text(
+            text = stringResource(R.string.spatial_test_stats, stats.done, stats.total, stats.ok, stats.failed),
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(0.65f),
+        )
+        TextButton(onClick = onCancel, contentPadding = PaddingValues(horizontal = 8.dp)) {
+            Text(stringResource(R.string.action_cancel))
         }
     }
 }

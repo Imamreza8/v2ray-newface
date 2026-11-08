@@ -37,6 +37,7 @@ fun MainTopBar(
     onSearchClose: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
+    groupSelector: @Composable () -> Unit,
     onAction: (MainAction) -> Unit,
     onMoreMenuAction: (MainMoreMenuAction) -> Unit
 ) {
@@ -61,6 +62,7 @@ fun MainTopBar(
     AppTopBar(
         containerColor = Color.Transparent,
         title = stringResource(R.string.title_server),
+        titleContent = groupSelector,
         onBackClick = {},
         isLoading = isLoading,
         isSearchActive = showSearch,
@@ -84,12 +86,6 @@ fun MainTopBar(
                 IconButton(onClick = { onSearchToggle(true) }) {
                     Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
                 }
-            }
-            IconButton(onClick = { onAction(MainAction.LocateSelectedServer) }) {
-                Icon(
-                    painterResource(R.drawable.ic_locate_selected_24dp),
-                    contentDescription = stringResource(R.string.title_locate_selected_config),
-                )
             }
             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                 IconButton(onClick = { showImportMenu = true }) {

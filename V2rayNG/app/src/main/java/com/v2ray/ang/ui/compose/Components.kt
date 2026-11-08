@@ -74,6 +74,7 @@ fun AppTopBar(
     searchPlaceholder: String? = null,
     navigationIcon: @Composable (() -> Unit)? = null,
     containerColor: Color? = null,
+    titleContent: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Column {
@@ -86,7 +87,7 @@ fun AppTopBar(
                         placeholder = searchPlaceholder
                     )
                 } else {
-                    Text(text = title)
+                    if (titleContent != null) titleContent() else Text(text = title)
                 }
             },
             navigationIcon = {

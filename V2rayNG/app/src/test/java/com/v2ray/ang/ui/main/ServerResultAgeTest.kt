@@ -30,4 +30,13 @@ class ServerResultAgeTest {
         assertEquals(ResultAge(ResultAgeUnit.HOURS, 23), serverResultAge(90, base, base + 86_399_999L))
         assertEquals(ResultAge(ResultAgeUnit.DAYS, 1), serverResultAge(90, base, base + 86_400_000L))
     }
+    @Test
+    fun zeroMinuteAgeIsVisuallyHiddenButOtherAgesRemainVisible() {
+        org.junit.jupiter.api.Assertions.assertFalse(shouldShowResultAge(null))
+        org.junit.jupiter.api.Assertions.assertFalse(shouldShowResultAge(ResultAge(ResultAgeUnit.MINUTES, 0)))
+        org.junit.jupiter.api.Assertions.assertTrue(shouldShowResultAge(ResultAge(ResultAgeUnit.MINUTES, 1)))
+        org.junit.jupiter.api.Assertions.assertTrue(shouldShowResultAge(ResultAge(ResultAgeUnit.UNKNOWN)))
+        org.junit.jupiter.api.Assertions.assertTrue(shouldShowResultAge(ResultAge(ResultAgeUnit.HOURS, 1)))
+        org.junit.jupiter.api.Assertions.assertTrue(shouldShowResultAge(ResultAge(ResultAgeUnit.DAYS, 1)))
+    }
 }

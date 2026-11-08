@@ -1,6 +1,9 @@
 package com.v2ray.ang.ui.main
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -43,58 +46,16 @@ import com.v2ray.ang.util.Utils
 internal fun GroupSelector(
     groups: List<GroupMapItem>,
     selectedGroupId: String,
-    mainViewModel: MainViewModel,
     onSelectGroup: (String) -> Unit,
     onManageGroups: () -> Unit,
+    showGroups: Boolean,
+    onShowGroups: (Boolean) -> Unit,
     showDetails: Boolean,
     onShowDetails: (Boolean) -> Unit,
     onAction: (MainAction) -> Unit,
 ) {
     val selected = groups.firstOrNull { it.id == selectedGroupId } ?: return
-    val selectedGroupFlow = remember(selected.id, mainViewModel) { mainViewModel.serverGroupState(selected.id) }
-    val selectedState by selectedGroupFlow.collectAsStateWithLifecycle()
-    var showGroups by rememberSaveable { mutableStateOf(false) }
-    val selectedLabel = selected.remarks
     val usage = selected.usageInfo
-    val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }
-    val chooserDescription = stringResource(R.string.spatial_choose_group_current, selectedLabel)
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(
-            onClick = { showGroups = true },
-            modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = chooserDescription },
-        ) {
-            Text(selectedLabel, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            selectedState.totalCount?.let { count ->
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.spatial_group_count, count), maxLines = 1)
-            }
-            Icon(painterResource(R.drawable.ic_expand_more_24dp), contentDescription = null)
-        }
-        if (selected.id.isNotEmpty()) {
-            if (summary == null) {
-                TextButton(onClick = { onShowDetails(true) }) {
-                    Text(stringResource(R.string.spatial_subscription_details))
-                }
-            } else {
-                val total = if (summary.totalBytes > 0L) summary.totalBytes.toTrafficString()
-                    else stringResource(R.string.sub_info_unlimited)
-                val traffic = stringResource(R.string.sub_info_traffic, summary.usedBytes.toTrafficString(), total)
-                val expiry = summary.expireMillis?.let { Utils.formatTimestamp(it, EXPIRY_DATE_PATTERN) }
-                    ?: stringResource(R.string.subscription_no_expiry)
-                val line = stringResource(R.string.subscription_summary_line, traffic, expiry)
-                val accessible = stringResource(R.string.subscription_summary_accessible, traffic, expiry)
-                TextButton(
-                    onClick = { onShowDetails(true) },
-                    modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = accessible },
-                ) {
-                    Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-    }
 
     if (showGroups) {
         var query by rememberSaveable { mutableStateOf("") }
@@ -102,7 +63,7 @@ internal fun GroupSelector(
             groups.filter { it.remarks.contains(query.trim(), ignoreCase = true) }
         }
         AlertDialog(
-            onDismissRequest = { showGroups = false },
+            onDismissRequest = { onShowGroups(false) },
             title = { Text(stringResource(R.string.spatial_choose_group)) },
             text = {
                 LazyColumn(
@@ -133,18 +94,18 @@ internal fun GroupSelector(
                         GroupChoice(
                             label = group.remarks,
                             selected = group.id == selectedGroupId,
-                            onSelect = { showGroups = false; onSelectGroup(group.id) },
+                            onSelect = { onShowGroups(false); onSelectGroup(group.id) },
                         )
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showGroups = false; onManageGroups() }) {
+                TextButton(onClick = { onShowGroups(false); onManageGroups() }) {
                     Text(stringResource(R.string.title_sub_setting))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showGroups = false }) { Text(stringResource(R.string.action_cancel)) }
+                TextButton(onClick = { onShowGroups(false) }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -173,6 +134,60 @@ internal fun GroupSelector(
                 TextButton(onClick = { onShowDetails(false) }) { Text(stringResource(R.string.action_close)) }
             },
         )
+    }
+}
+
+@Composable
+internal fun GroupSubscriptionSummary(groups: List<GroupMapItem>, selectedGroupId: String, onOpen: () -> Unit) {
+    val selected = groups.firstOrNull { it.id == selectedGroupId } ?: return
+    if (selected.id.isEmpty()) return
+    val usage = selected.usageInfo
+    val summary = remember(usage) { usage?.let { buildSubscriptionInfoUiModel(it, System.currentTimeMillis()) } }
+    if (summary == null) {
+        TextButton(onClick = onOpen) { Text(stringResource(R.string.spatial_subscription_details)) }
+    } else {
+        val total = if (summary.totalBytes > 0L) summary.totalBytes.toTrafficString()
+            else stringResource(R.string.sub_info_unlimited)
+        val traffic = stringResource(R.string.sub_info_traffic, summary.usedBytes.toTrafficString(), total)
+        val expiry = summary.expireMillis?.let { Utils.formatTimestamp(it, EXPIRY_DATE_PATTERN) }
+            ?: stringResource(R.string.subscription_no_expiry)
+        val line = stringResource(R.string.subscription_summary_line, traffic, expiry)
+        val accessible = stringResource(R.string.subscription_summary_accessible, traffic, expiry)
+        TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = accessible
+        }) {
+            Text(line, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+internal fun GroupSelectorTrigger(
+    groups: List<GroupMapItem>,
+    selectedGroupId: String,
+    mainViewModel: MainViewModel,
+    onOpen: () -> Unit,
+) {
+    val selected = groups.firstOrNull { it.id == selectedGroupId } ?: return
+    androidx.compose.runtime.key(selected.id) {
+        val selectedGroupFlow = remember(selected.id, mainViewModel) { mainViewModel.serverGroupState(selected.id) }
+        val selectedState by selectedGroupFlow.collectAsStateWithLifecycle()
+        val description = stringResource(R.string.spatial_choose_group_current, selected.remarks)
+        val shape = RoundedCornerShape(24.dp)
+        TextButton(
+            onClick = onOpen,
+            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, shape)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+                .semantics(mergeDescendants = true) { contentDescription = description },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+        ) {
+            Text(selected.remarks, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            selectedState.totalCount?.let { count ->
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.spatial_group_count, count), maxLines = 1)
+            }
+            Icon(painterResource(R.drawable.ic_expand_more_24dp), contentDescription = null)
+        }
     }
 }
 

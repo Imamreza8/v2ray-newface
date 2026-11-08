@@ -65,17 +65,27 @@ class MainImportMenuTest {
     }
 
     @Test
-    fun toolsSheetShowsOperationsOnceAndKeepsDedicatedTestAndLocateOut() {
+    fun toolsSheetShowsOperationsOnceAndKeepsDedicatedTestsOut() {
         val visible = ToolCategory.entries.flatMap(::visibleToolActions)
         assertEquals(visible.size, visible.toSet().size)
         assertEquals(
-            MainMoreMenuAction.entries.toSet() - setOf(MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing, MainMoreMenuAction.LocateSelected),
+            MainMoreMenuAction.entries.toSet() - setOf(MainMoreMenuAction.TestAll, MainMoreMenuAction.TestAllRealPing),
             visible.toSet(),
         )
         assertEquals(ToolCategory.SUBSCRIPTIONS, toolCategory(MainMoreMenuAction.GroupDetails))
         assertEquals(ToolCategory.SERVICE, toolCategory(MainMoreMenuAction.RestartService))
         assertEquals(ToolCategory.EXPORT, toolCategory(MainMoreMenuAction.ExportAll))
         assertEquals(ToolCategory.ORDER, toolCategory(MainMoreMenuAction.SortByTestResults))
+    }
+
+    @Test
+    fun primaryTilesAreUniqueVisibleActionsAndNeverIncludeDeletion() {
+        val primary = primaryToolActions()
+        val visible = ToolCategory.entries.flatMap(::visibleToolActions)
+        assertEquals(3, primary.size)
+        assertEquals(primary.size, primary.toSet().size)
+        assertEquals(true, primary.all { it in visible && toolCategory(it) != ToolCategory.DELETE })
+        assertEquals(true, MainMoreMenuAction.LocateSelected in visible)
     }
 
 }
