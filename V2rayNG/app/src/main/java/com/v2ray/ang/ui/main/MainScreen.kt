@@ -15,6 +15,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -47,6 +48,8 @@ import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 @Composable
 fun MainScreen(
@@ -254,9 +257,8 @@ fun MainScreen(
             onShowDetails = { showSubscriptionDetails = it },
             onAction = onAction,
         )
+        val connectionBarHaze = rememberHazeState()
         Box(modifier = Modifier.fillMaxSize()) {
-        // Same space backdrop as the home screen, so the list screen no longer looks like another app
-        SpatialBackground()
         // Use the actual active pager page, not a row index, to observe only its list/grid.
         val activeGroupId = groups.getOrNull(pagerState.currentPage)?.id
         val serverListScrolling = if (doubleColumnDisplay) {
@@ -264,6 +266,10 @@ fun MainScreen(
         } else {
             activeGroupId?.let { lazyListStates[it]?.isScrollInProgress } == true
         }
+        // Capture both backdrop and server list, but not the floating bar itself.
+        Box(modifier = Modifier.fillMaxSize().hazeSource(connectionBarHaze)) {
+        // Same space backdrop as the home screen, so the list screen no longer looks like another app
+        SpatialBackground()
         val visibleTestCount = if (groups.isNotEmpty()) key(uiState.selectedGroupId) {
             val selectedGroupFlow = remember(uiState.selectedGroupId) {
                 mainViewModel.serverGroupState(uiState.selectedGroupId)
@@ -273,6 +279,8 @@ fun MainScreen(
         } else null
         Scaffold(
             containerColor = Color.Transparent,
+            // Transparent Scaffold cannot infer a contrasting foreground from its container.
+            contentColor = MaterialTheme.colorScheme.onSurface,
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
                 MainTopBar(
@@ -375,6 +383,7 @@ fun MainScreen(
                 }
             }
         }
+        }
         AnimatedVisibility(
             visible = connectionBarVisible(pagerState.isScrollInProgress, serverListScrolling),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -386,6 +395,7 @@ fun MainScreen(
                 connectionStatus = uiState.connectionStatus,
                 isRunning = isRunning,
                 isDarkTheme = isDarkTheme,
+                hazeState = connectionBarHaze,
                 onAction = onAction,
             )
         }

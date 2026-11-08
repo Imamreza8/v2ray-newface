@@ -59,11 +59,10 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.handler.TopConfigManager
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.LocalSpatialTheme
+import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
-import com.v2ray.ang.ui.compose.colorPing
-import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
@@ -356,7 +355,7 @@ private fun ServerListItem(
         Modifier
             .padding(horizontal = 12.dp, vertical = 2.dp)
             .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.80f))
             .border(
                 1.dp,
                 if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
@@ -413,6 +412,7 @@ private fun ServerListItem(
         ) {
             Text(
                 row.remarks,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium.copy(lineBreak = LineBreak.Paragraph),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -458,22 +458,21 @@ private fun ServerListItem(
             Icon(
                 painterResource(R.drawable.ic_more_vert_24dp),
                 stringResource(R.string.acc_more),
-                Modifier.size(24.dp)
+                Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-/** Coloured result block: green < 150 ms, amber < 300 ms, red above or failed, grey = untested. Old results are dimmed. */
+/** Coloured result block: green < 150 ms, amber < 300 ms, red above or failed, grey = untested. */
 @Composable
 private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
-    val color = when {
-        delayMillis < 0L -> colorPingRed
-        delayMillis == 0L -> MaterialTheme.colorScheme.onSurfaceVariant
-        delayMillis < 150L -> colorPing
-        delayMillis < 300L -> Color(0xFFF59E0B)
-        else -> colorPingRed
-    }
+    val color = serverPingColor(
+        delayMillis = delayMillis,
+        darkTheme = LocalDarkTheme.current,
+        untestedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     val label = when {
         delayMillis < 0L -> stringResource(R.string.spatial_test_failed)
         delayMillis == 0L -> stringResource(R.string.spatial_not_tested)
@@ -509,7 +508,7 @@ private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
     ) {
         Text(
             label,
-            color = color.copy(alpha = if (stale) 0.6f else 1f),
+            color = color,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -518,7 +517,7 @@ private fun PingBadge(delayMillis: Long, age: ResultAge?, stale: Boolean) {
         if (ageShort != null && shouldShowResultAge(age)) {
             Text(
                 ageShort,
-                color = color.copy(alpha = if (stale) 0.6f else 0.85f),
+                color = color,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -544,3 +543,11 @@ internal suspend fun PagerState.navigateToPageOptimized(
 }
 
 private const val STALE_RESULT_MILLIS = 30L * 60L * 1000L
+
+/** Bright enough against the server card; age is indicated by text, not faded foreground. */
+internal fun serverPingColor(delayMillis: Long, darkTheme: Boolean, untestedColor: Color): Color = when {
+    delayMillis == 0L -> untestedColor
+    delayMillis in 1L..149L -> if (darkTheme) Color(0xFF62F5BD) else Color(0xFF006B48)
+    delayMillis in 150L..299L -> if (darkTheme) Color(0xFFFFD36B) else Color(0xFF795100)
+    else -> if (darkTheme) Color(0xFFFF8AC2) else Color(0xFFA40052)
+}

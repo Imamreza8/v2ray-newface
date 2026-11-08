@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -48,6 +49,12 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import kotlinx.coroutines.launch
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeSourceRetention
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 
 @Composable
 fun MainBottomBar(
@@ -55,6 +62,7 @@ fun MainBottomBar(
     connectionStatus: MainStatus,
     isRunning: Boolean,
     isDarkTheme: Boolean,
+    hazeState: HazeState,
     onAction: (MainAction) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -96,19 +104,36 @@ fun MainBottomBar(
             .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         val shape = RoundedCornerShape(32.dp)
-        val glass = Brush.verticalGradient(listOf(
-            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.92f),
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        val surface = MaterialTheme.colorScheme.surface
+        val blurStyle = remember(surface) {
+            HazeBlurStyle {
+                blurRadius(22.dp)
+                // Keep light text legible even over bright content behind the panel.
+                colorEffects(listOf(HazeColorEffect.tint(surface.copy(alpha = CONNECTION_GLASS_TINT_ALPHA))))
+                // Android 11 and below use Haze's scrim fallback, not backdrop blur.
+                fallbackColorEffect(HazeColorEffect.tint(surface.copy(alpha = 0.90f)))
+                noiseFactor(0f)
+            }
+        }
+        val glassHighlight = Brush.verticalGradient(listOf(
+            Color.White.copy(alpha = if (isDarkTheme) CONNECTION_GLASS_HIGHLIGHT_ALPHA_DARK else 0.24f),
+            Color.White.copy(alpha = 0.03f),
         ))
         Row(
             modifier = Modifier.fillMaxWidth().shadow(10.dp, shape, clip = false)
-                .background(glass, shape)
-                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), shape)
+                .clip(shape)
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState, retention = HazeSourceRetention.ClearWhenUnavailable),
+                    style = blurStyle,
+                )
+                .background(glassHighlight, shape)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f), shape)
                 .heightIn(min = 56.dp).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = compactText,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -152,3 +177,7 @@ fun MainBottomBar(
 /** Presentation only: scrolling never changes the actual VPN connection. */
 internal fun connectionBarVisible(pageScrolling: Boolean, serverListScrolling: Boolean): Boolean =
     !pageScrolling && !serverListScrolling
+
+// Shared with the contrast regression test for a white backdrop beneath the blur.
+internal const val CONNECTION_GLASS_TINT_ALPHA = 0.76f
+internal const val CONNECTION_GLASS_HIGHLIGHT_ALPHA_DARK = 0.12f
