@@ -79,10 +79,6 @@ internal fun buildSubscriptionInfoUiModel(
     )
 }
 
-/** A successful refresh can change account headers even if no profiles were imported. */
-internal fun shouldRefreshSubscriptionGroups(successCount: Int, configCount: Int): Boolean =
-    successCount > 0 || configCount > 0
-
 /** Zero-valued fields cannot distinguish an absent header from an explicit zero. */
 internal fun hasKnownTraffic(info: SubscriptionUsageInfo): Boolean =
     info.upload > 0 || info.download > 0 || info.total > 0

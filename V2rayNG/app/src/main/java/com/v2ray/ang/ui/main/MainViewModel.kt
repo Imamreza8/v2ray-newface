@@ -753,10 +753,9 @@ class MainViewModel(
                         else ->
                             toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                     }
-                    if (shouldRefreshSubscriptionGroups(result.successCount, result.configCount)) {
-                        // Account headers may change even when no new configurations are imported.
+                    if (result.configCount > 0) {
                         setupGroupTab(forceRefresh = true)
-                        if (result.configCount > 0) refreshSelectedGuid()
+                        refreshSelectedGuid()
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
