@@ -64,4 +64,13 @@ class LiveServerFilterTest {
         assertEquals(FilterCounts(all = 2, top = 2, alive = 2), twice.counts)
         assertEquals(listOf("a", "b"), twice.rows.map { it.guid })
     }
+    @Test
+    fun invalidRegexIsMatchedLiterallyRatherThanShowingEverything() {
+        val input = listOf(server("alpha[", 0), server("other", 0))
+        assertEquals(input, filterServersByKeyword(input, " "))
+        assertEquals(listOf("alpha["), filterServersByKeyword(input, "[ ").map { it.guid })
+        assertEquals(emptyList<String>(), filterServersByKeyword(input, "(").map { it.guid })
+        assertEquals(listOf("other"), filterServersByKeyword(input, "^OTHER$").map { it.guid })
+        assertEquals(emptyList<String>(), filterServersByKeyword(emptyList(), "[").map { it.guid })
+    }
 }

@@ -104,9 +104,9 @@ internal fun ServerListChrome(
             }
         }
         val stats = uiState.runStats
-        if (uiState.isTesting && stats.total > stats.done) {
+        if (testStrip(uiState) == TestStrip.BULK_PROGRESS) {
             TestProgressStrip(stats = stats, onCancel = { onAction(MainAction.CancelTesting) })
-        } else if (uiState.resumableCount > 0) {
+        } else if (testStrip(uiState) == TestStrip.RESUME) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -185,7 +185,8 @@ private fun FilterChipItem(selected: Boolean, label: String, onClick: () -> Unit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TestOptionsSheet(
-    enabled: Boolean,
+    isTesting: Boolean,
+    isRunning: Boolean,
     visibleTestCount: Int?,
     onChoose: (ScopedTestKind) -> Unit,
     onDismiss: () -> Unit,
@@ -199,7 +200,7 @@ internal fun TestOptionsSheet(
             ScopedTestKind.entries.forEach { kind ->
                 TextButton(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = enabled,
+                    enabled = testChoiceEnabled(kind, isTesting, isRunning),
                     onClick = { onChoose(kind) },
                 ) {
                     Column(Modifier.fillMaxWidth()) {

@@ -66,4 +66,27 @@ class MainTestRequestsTest {
         assertFalse(canStartCurrentConnectionTest(isRunning = true, isTesting = true))
         assertFalse(canStartCurrentConnectionTest(isRunning = false, isTesting = true))
     }
+    @Test
+    fun currentConnectionTestFromOptionsRunsWithoutAProposal() {
+        assertEquals(MainAction.TestCurrentServer, actionForTestChoice(ScopedTestKind.CURRENT))
+        for (kind in ScopedTestKind.entries.filter { it != ScopedTestKind.CURRENT }) {
+            assertEquals(MainAction.PrepareScopedTest(kind), actionForTestChoice(kind))
+            assertTrue(testChoiceEnabled(kind, isTesting = false, isRunning = false))
+            assertFalse(testChoiceEnabled(kind, isTesting = true, isRunning = true))
+        }
+        assertTrue(testChoiceEnabled(ScopedTestKind.CURRENT, isTesting = false, isRunning = true))
+        assertFalse(testChoiceEnabled(ScopedTestKind.CURRENT, isTesting = false, isRunning = false))
+        assertFalse(testChoiceEnabled(ScopedTestKind.CURRENT, isTesting = true, isRunning = true))
+    }
+
+    @Test
+    fun currentConnectionTestNeverShowsAStaleBulkProgressOrResumeAction() {
+        val base = MainUiState(runStats = TestRunStats(total = 10, done = 4), resumableCount = 6)
+        assertEquals(TestStrip.NONE, testStrip(MainUiState()))
+        assertEquals(TestStrip.RESUME, testStrip(base))
+        assertEquals(TestStrip.NONE, testStrip(base.copy(isTesting = true)))
+        assertEquals(TestStrip.BULK_PROGRESS, testStrip(base.copy(isTesting = true, isBulkTesting = true)))
+        assertEquals(TestStrip.NONE, testStrip(base.copy(isTesting = true, isBulkTesting = true,
+            runStats = TestRunStats(total = 10, done = 10))))
+    }
 }

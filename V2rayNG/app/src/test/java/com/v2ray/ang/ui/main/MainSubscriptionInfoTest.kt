@@ -62,4 +62,11 @@ class MainSubscriptionInfoTest {
         assertTrue(hasKnownTraffic(SubscriptionUsageInfo(download = 1)))
         assertTrue(hasKnownTraffic(SubscriptionUsageInfo(total = 1)))
     }
+    @Test
+    fun successfulSubscriptionRefreshReloadsGroupInformationEvenWithoutImportedProfiles() {
+        assertFalse(shouldRefreshSubscriptionGroups(0, 0))
+        assertFalse(shouldRefreshSubscriptionGroups(-1, 0))
+        assertTrue(shouldRefreshSubscriptionGroups(1, 0))
+        assertTrue(shouldRefreshSubscriptionGroups(0, 5))
+    }
 }

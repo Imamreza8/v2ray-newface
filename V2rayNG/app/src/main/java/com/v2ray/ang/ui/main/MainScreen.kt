@@ -82,8 +82,8 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var showSearch by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
+    val searchQuery = uiState.searchQuery
     var showGroupChooser by rememberSaveable { mutableStateOf(false) }
     var showSubscriptionDetails by rememberSaveable { mutableStateOf(false) }
     var controlsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -240,7 +240,6 @@ fun MainScreen(
         } else {
         BackHandler { showFullList = false }
         BackHandler(enabled = showSearch) {
-            searchQuery = ""
             onAction(MainAction.Search(""))
             showSearch = false
         }
@@ -325,16 +324,15 @@ fun MainScreen(
                     displaySort = uiState.displaySort,
                     showSubscriptionDetails = hasSubscriptionDetails(groups.firstOrNull { it.id == uiState.selectedGroupId }),
                     isTesting = uiState.isTesting,
+                    isRunning = isRunning,
                     testEnabled = groups.isNotEmpty(),
                     visibleTestCount = visibleTestCount,
                     showSearch = showSearch,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { query: String ->
-                        searchQuery = query
                         onAction(MainAction.Search(query))
                     },
                     onSearchClose = {
-                        searchQuery = ""
                         onAction(MainAction.Search(""))
                         showSearch = false
                     },

@@ -35,6 +35,7 @@ fun MainTopBar(
     displaySort: ServerDisplaySort,
     showSubscriptionDetails: Boolean,
     isTesting: Boolean,
+    isRunning: Boolean,
     testEnabled: Boolean,
     visibleTestCount: Int?,
     showSearch: Boolean,
@@ -62,11 +63,12 @@ fun MainTopBar(
     }
     if (showTestOptions) {
         TestOptionsSheet(
-            enabled = !isTesting,
+            isTesting = isTesting,
+            isRunning = isRunning,
             visibleTestCount = visibleTestCount,
             onChoose = { kind ->
                 showTestOptions = false
-                onAction(MainAction.PrepareScopedTest(kind))
+                onAction(actionForTestChoice(kind))
             },
             onDismiss = { showTestOptions = false },
         )

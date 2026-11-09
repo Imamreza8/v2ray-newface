@@ -22,6 +22,8 @@ class MainContractTest {
     fun initialUiState_hasNoRunOrSpeedTest() {
         val state = MainUiState()
         assertEquals(TestRunStats(), state.runStats)
+        assertEquals("", state.searchQuery)
+        assertFalse(state.isBulkTesting)
         assertEquals(ServerDisplaySort.DEFAULT, state.displaySort)
         assertEquals(null, state.scopedTestProposal)
         assertEquals(0, state.resumableCount)

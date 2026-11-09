@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.main
 
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
@@ -94,6 +95,16 @@ data class FilterCounts(
     val failed: Int = 0,
 )
 
+/** Ungrouped profiles use the default subscription ID in storage, not the synthetic All ID. */
+internal fun locateGroupId(subscriptionId: String, groupIds: List<String>): String? {
+    val actualId = subscriptionId.ifEmpty { AppConfig.DEFAULT_SUBSCRIPTION_ID }
+    return when {
+        actualId in groupIds -> actualId
+        "" in groupIds -> ""
+        else -> null
+    }
+}
+
 /** The choices in the list test controls; TOP and FAILED are restricted to visible rows. */
 enum class ScopedTestKind { REAL, TCP, TOP, FAILED, CURRENT }
 
@@ -175,6 +186,7 @@ data class MainUiState(
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
+    val isBulkTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
     val connectionStatus: MainStatus = MainStatus.Disconnected,
     val locateTarget: LocateTarget? = null,
@@ -185,6 +197,7 @@ data class MainUiState(
     val selectedInfo: SelectedServerInfo? = null,
     val spatialExpanded: Boolean = true,
     val reduceMotion: Boolean = false,
+    val searchQuery: String = "",
     val statusFilter: ServerStatusFilter = ServerStatusFilter.ALL,
     val displaySort: ServerDisplaySort = ServerDisplaySort.DEFAULT,
     val filterCounts: FilterCounts = FilterCounts(),
@@ -210,8 +223,10 @@ internal fun stateAfterSelectionChange(state: MainUiState, guid: String?, bulkAc
     val base = if (state.isRunning) MainStatus.Connected else MainStatus.Disconnected
     return state.copy(
         selectedGuid = guid,
+        locateTarget = null,
         selectedInfo = null,
         isTesting = bulkActive,
+        isBulkTesting = bulkActive,
         status = when {
             !bulkActive -> base
             state.status is MainStatus.TestProgress -> state.status

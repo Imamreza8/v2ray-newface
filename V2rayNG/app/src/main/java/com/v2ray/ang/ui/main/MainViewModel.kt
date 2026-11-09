@@ -16,7 +16,6 @@ import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
-import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
@@ -46,7 +45,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
-import java.util.regex.PatternSyntaxException
 
 private fun applyTestDelayResults(
     servers: List<ServersCache>,
@@ -123,8 +121,7 @@ class MainViewModel(
     private var smartConnectRequested = false
 
     // ---------- Keyword filtering ----------
-    @Volatile
-    private var keywordFilter: String = ""
+    private val keywordFilter: String get() = uiState.value.searchQuery
     private val statusFilter: ServerStatusFilter get() = uiState.value.statusFilter
     private var filterJob: Job? = null
 
@@ -143,6 +140,7 @@ class MainViewModel(
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
     private var selectedInfoJob: Job? = null
+    private var locateJob: Job? = null
     private var testResultFlushJob: Job? = null
     private val pendingTestResults = linkedMapOf<String, Long>()
 
@@ -355,7 +353,7 @@ class MainViewModel(
             MainAction.ConfirmScopedTest -> confirmScopedTest()
             MainAction.DismissScopedTest -> _uiState.update { it.copy(scopedTestProposal = null) }
             MainAction.CancelTesting -> cancelByUser()
-            MainAction.ResumeTesting -> startGuidTest(resumeGuids, runOnlyTcp, resumeGroupId)
+            MainAction.ResumeTesting -> if (!uiState.value.isTesting) startGuidTest(resumeGuids, runOnlyTcp, resumeGroupId)
             // The theme itself is observed from ThemeManager by AppTheme, so only persist the choice here.
             is MainAction.SetSpatialTheme ->
                 viewModelScope.launch(ioDispatcher) { ThemeManager.setSpatialThemeEnabled(action.enabled) }
@@ -502,23 +500,6 @@ class MainViewModel(
         }
     }
 
-    private fun applyKeywordFilter(servers: List<ServersCache>, query: String = keywordFilter): List<ServersCache> {
-        val keyword = query.trim()
-        if (keyword.isEmpty()) return servers
-        val regex = try {
-            Regex(keyword, RegexOption.IGNORE_CASE)
-        } catch (_: PatternSyntaxException) {
-            return servers
-        }
-        return servers.filter { cache ->
-            val profile = cache.profile
-            profile.remarks.matchesPattern(regex, keyword) ||
-                    profile.description.orEmpty().matchesPattern(regex, keyword) ||
-                    profile.server.orEmpty().matchesPattern(regex, keyword) ||
-                    profile.configType.name.matchesPattern(regex, keyword)
-        }
-    }
-
     private suspend fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
         withContext(defaultDispatcher) {
             presentationMutex.withLock {
@@ -534,7 +515,7 @@ class MainViewModel(
         val filter = statusFilter
         val sort = uiState.value.displaySort
         val topMax = TopConfigManager.getMaxDelayMillis()
-        val keywordServers = applyKeywordFilter(servers, query)
+        val keywordServers = filterServersByKeyword(servers, query)
         val keywordRows = buildServerRows(groupId, keywordServers)
         val visibleServers = ArrayList<ServersCache>()
         val visibleRows = ArrayList<ServerRowUiModel>()
@@ -594,7 +575,7 @@ class MainViewModel(
 
     private fun setStatusFilter(filter: ServerStatusFilter) {
         if (filter == statusFilter) return
-        _uiState.update { it.copy(statusFilter = filter) }
+        _uiState.update { it.copy(statusFilter = filter, locateTarget = null) }
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
             val snapshot = cacheMutex.withLock { groupDataCache.toMap() }
@@ -772,9 +753,10 @@ class MainViewModel(
                         else ->
                             toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                     }
-                    if (result.configCount > 0) {
+                    if (shouldRefreshSubscriptionGroups(result.successCount, result.configCount)) {
+                        // Account headers may change even when no new configurations are imported.
                         setupGroupTab(forceRefresh = true)
-                        refreshSelectedGuid()
+                        if (result.configCount > 0) refreshSelectedGuid()
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -1008,7 +990,7 @@ class MainViewModel(
         mutableServerGroupState(id)
         if (uiState.value.selectedGroupId != id) {
             dataSource.setSelectedSubscriptionId(id)
-            _uiState.update { it.copy(selectedGroupId = id) }
+            _uiState.update { it.copy(selectedGroupId = id, locateTarget = null) }
             refreshFilterCountsFor(id)
         }
         selectedGroupLoadJob?.cancel()
@@ -1049,7 +1031,7 @@ class MainViewModel(
 
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
-        keywordFilter = keyword
+        _uiState.update { it.copy(searchQuery = keyword, locateTarget = null) }
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
             delay(300)
@@ -1184,6 +1166,7 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 isTesting = testRequests.isTesting,
+                isBulkTesting = testRequests.bulk != null,
                 status = if (testRequests.isTesting) MainStatus.Testing
                 else if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected,
                 connectionStatus = connectionStatusAfterTestReset(
@@ -1203,9 +1186,7 @@ class MainViewModel(
                 toast(R.string.scoped_test_requires_connection)
                 return
             }
-            _uiState.update {
-                it.copy(scopedTestProposal = ScopedTestProposal(kind, "", "", ui.statusFilter, 0, false, emptyList()))
-            }
+            testCurrentServerRealPing()
             return
         }
         val group = ui.groups.firstOrNull { it.id == ui.selectedGroupId } ?: return
@@ -1285,6 +1266,7 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 isTesting = true,
+                isBulkTesting = true,
                 status = MainStatus.Testing
             )
         }
@@ -1305,7 +1287,7 @@ class MainViewModel(
             serverGuids = guids,
             onlyTcp = onlyTcp
         )
-        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        _uiState.update { it.copy(isTesting = true, isBulkTesting = true, status = MainStatus.Testing) }
         bulkTestJob = viewModelScope.launch {
             dataSource.sendMsg2TestService(message, request.id)
         }
@@ -1573,18 +1555,46 @@ class MainViewModel(
     }
 
     fun triggerLocateSelectedServer() {
-        val selected = dataSource.getSelectServer() ?: return
-        val profile = dataSource.decodeServerConfig(selected) ?: return
-        val groupId = profile.subscriptionId
-        if (_uiState.value.groups.none { it.id == groupId }) return
-        viewModelScope.launch(ioDispatcher) {
-            updateGroupUi(groupId, loadGroup(groupId))
-            if (_uiState.value.selectedGroupId != groupId) {
-                dataSource.setSelectedSubscriptionId(groupId)
-            }
-            val target = LocateTarget(groupId, selected)
-            _uiState.update {
-                it.copy(selectedGroupId = groupId, locateTarget = target)
+        locateJob?.cancel()
+        val selected = uiState.value.selectedGuid
+        val startingGroupId = uiState.value.selectedGroupId
+        if (selected.isNullOrEmpty()) {
+            toast(R.string.title_file_chooser)
+            return
+        }
+        locateJob = viewModelScope.launch {
+            try {
+                val subscriptionId = withContext(ioDispatcher) {
+                    dataSource.decodeServerConfig(selected)?.subscriptionId
+                }
+                if (subscriptionId == null || uiState.value.selectedGuid != selected ||
+                    uiState.value.selectedGroupId != startingGroupId
+                ) return@launch
+                val groupId = locateGroupId(subscriptionId, uiState.value.groups.map { it.id })
+                if (groupId == null) {
+                    toastError(R.string.toast_failure)
+                    return@launch
+                }
+                // A hidden target cannot be scrolled into view. Reset filters before rendering it.
+                filterConfig("")
+                setStatusFilter(ServerStatusFilter.ALL)
+                subscriptionIdChanged(groupId)
+                withContext(ioDispatcher) { updateGroupUi(groupId, loadGroup(groupId)) }
+                val current = uiState.value
+                if (current.selectedGuid == selected && current.selectedGroupId == groupId &&
+                    current.searchQuery.isEmpty() && current.statusFilter == ServerStatusFilter.ALL
+                ) {
+                    if (mutableServerGroupState(groupId).value.rows.any { it.guid == selected }) {
+                        _uiState.update { it.copy(locateTarget = LocateTarget(groupId, selected)) }
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to locate selected server", error)
+                toastError(R.string.toast_failure)
             }
         }
     }
@@ -1600,6 +1610,7 @@ class MainViewModel(
             state.copy(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
+                isBulkTesting = testRequests.bulk != null,
                 status = if (!clearTestingText && state.isRunning == running) state.status
                 else if (running) MainStatus.Connected else MainStatus.Disconnected,
                 connectionStatus = if (!clearTestingText && state.isRunning == running) state.connectionStatus

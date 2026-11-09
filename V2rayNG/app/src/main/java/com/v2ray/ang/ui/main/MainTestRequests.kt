@@ -72,3 +72,18 @@ internal fun visibleScopedTestCount(
 /** A direct current-connection test never starts while disconnected or another test is running. */
 internal fun canStartCurrentConnectionTest(isRunning: Boolean, isTesting: Boolean): Boolean =
     isRunning && !isTesting
+
+/** Choosing the current connection is a direct request, not a bulk confirmation. */
+internal fun actionForTestChoice(kind: ScopedTestKind): MainAction =
+    if (kind == ScopedTestKind.CURRENT) MainAction.TestCurrentServer else MainAction.PrepareScopedTest(kind)
+
+internal fun testChoiceEnabled(kind: ScopedTestKind, isTesting: Boolean, isRunning: Boolean): Boolean =
+    !isTesting && (kind != ScopedTestKind.CURRENT || isRunning)
+
+internal enum class TestStrip { NONE, BULK_PROGRESS, RESUME }
+
+internal fun testStrip(state: MainUiState): TestStrip = when {
+    state.isBulkTesting && state.runStats.total > state.runStats.done -> TestStrip.BULK_PROGRESS
+    !state.isTesting && state.resumableCount > 0 -> TestStrip.RESUME
+    else -> TestStrip.NONE
+}

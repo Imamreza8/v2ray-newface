@@ -1,6 +1,26 @@
 package com.v2ray.ang.ui.main
 
 import com.v2ray.ang.dto.entities.ServersCache
+import com.v2ray.ang.extension.matchesPattern
+import java.util.regex.PatternSyntaxException
+
+/** Invalid regex syntax is treated as a literal search, never as a match for every server. */
+internal fun filterServersByKeyword(servers: List<ServersCache>, query: String): List<ServersCache> {
+    val keyword = query.trim()
+    if (keyword.isEmpty()) return servers
+    val regex = try {
+        Regex(keyword, RegexOption.IGNORE_CASE)
+    } catch (_: PatternSyntaxException) {
+        null
+    }
+    return servers.filter { server ->
+        val profile = server.profile
+        profile.remarks.matchesPattern(regex, keyword) ||
+            profile.description.orEmpty().matchesPattern(regex, keyword) ||
+            profile.server.orEmpty().matchesPattern(regex, keyword) ||
+            profile.configType.name.matchesPattern(regex, keyword)
+    }
+}
 
 /** Full count is used when loading a group or changing the search; batches use only transitions. */
 internal fun countServerStatuses(servers: List<ServersCache>, topMaxMillis: Long): FilterCounts {
