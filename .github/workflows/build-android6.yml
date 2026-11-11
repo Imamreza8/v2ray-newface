@@ -110,7 +110,12 @@ jobs:
           for i, line in enumerate(text):
               if patterns.search(line):
                   selected.update(range(max(0, i - 1), min(len(text), i + 5)))
-          report = '\n'.join(text[i] for i in sorted(selected))[-12000:] or '\n'.join(text[-40:])
+          from pathlib import Path
+          reports = list(Path('app/build/reports').glob('lint-results-*.txt'))
+          errors = []
+          for path in reports:
+              errors.extend(line for line in path.read_text(errors='replace').splitlines() if ': Error: ' in line)
+          report = ('\n'.join(errors) if errors else '\n'.join(text[i] for i in sorted(selected))[-12000:]) or '\n'.join(text[-40:])
           report = report.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print('::error::Gradle diagnostics: ' + report)
           PY

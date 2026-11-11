@@ -3,6 +3,7 @@ package com.v2ray.ang.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.UserManager
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.core.LauncherManager
@@ -32,6 +33,8 @@ class BootReceiver : BroadcastReceiver() {
             }
 
             Intent.ACTION_LOCKED_BOOT_COMPLETED -> {
+                // Direct boot is available only on Android 7 and newer.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
                 val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
                 if (userManager != null && !userManager.isUserUnlocked) {
                     LogUtil.w(AppConfig.TAG, "BootReceiver: User is locked, skipping auto start")
