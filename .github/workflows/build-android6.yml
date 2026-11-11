@@ -174,10 +174,11 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            set -euo pipefail
-            mapfile -t apks < <(find android6-apks -name '*_x86_64.apk')
-            test "${#apks[@]}" -eq 1
-            adb install "${apks[0]}"
+            set -eu
+            apk=$(find android6-apks -name '*_x86_64.apk')
+            test -n "$apk"
+            test "$(printf '%s\n' "$apk" | wc -l)" -eq 1
+            adb install "$apk"
             output=$(adb shell am start -W -n com.v2ray.ang.newface/com.v2ray.ang.ui.main.MainActivity)
             printf '%s\n' "$output"
             printf '%s\n' "$output" | grep -F 'Status: ok'
