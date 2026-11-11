@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.app.ServiceCompat
 import androidx.core.app.NotificationCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.TrafficSpeed
@@ -133,7 +134,7 @@ object NotificationManager {
      */
     fun cancelNotification() {
         val service = getService() ?: return
-        service.stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        ServiceCompat.stopForeground(service, ServiceCompat.STOP_FOREGROUND_REMOVE)
 
         mBuilder = null
         speedNotificationJob?.cancel()

@@ -114,7 +114,7 @@ jobs:
           reports = list(Path('app/build/reports').glob('lint-results-*.txt'))
           errors = []
           for path in reports:
-              errors.extend(line for line in path.read_text(errors='replace').splitlines() if ': Error: ' in line)
+              errors.extend(line.split('/V2rayNG/', 1)[-1] for line in path.read_text(errors='replace').splitlines() if ': Error: ' in line)
           report = ('\n'.join(errors) if errors else '\n'.join(text[i] for i in sorted(selected))[-12000:]) or '\n'.join(text[-40:])
           report = report.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print('::error::Gradle diagnostics: ' + report)

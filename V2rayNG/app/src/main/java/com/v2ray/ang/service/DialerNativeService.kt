@@ -26,6 +26,7 @@ import org.json.JSONObject
 import java.io.EOFException
 import java.net.SocketException
 import java.net.URI
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -110,7 +111,7 @@ class DialerNativeService : IDialerService {
     private var scope = CoroutineScope(serviceJob + Dispatchers.IO)
     private val running = AtomicBoolean(false)
     private val controlSocketState = AtomicInteger(CONTROL_SOCKET_IDLE)
-    private val controlSockets = ConcurrentHashMap.newKeySet<WebSocket>()
+    private val controlSockets = Collections.newSetFromMap(ConcurrentHashMap<WebSocket, Boolean>())
 
     @Volatile
     private var controlUrl: String? = null

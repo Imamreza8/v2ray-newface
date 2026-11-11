@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Context
 import android.os.Build
 import androidx.annotation.StringRes
+import androidx.core.app.ServiceCompat
 import androidx.core.app.NotificationCompat
 import com.v2ray.ang.R
 import com.v2ray.ang.enums.NotificationChannelType
@@ -100,7 +101,7 @@ object NotificationHelper {
      * @param service The service to stop foreground on
      */
     fun stopForeground(service: Service) {
-        service.stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        ServiceCompat.stopForeground(service, ServiceCompat.STOP_FOREGROUND_REMOVE)
     }
 
     /**

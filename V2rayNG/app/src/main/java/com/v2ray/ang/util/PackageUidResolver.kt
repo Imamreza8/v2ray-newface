@@ -2,6 +2,7 @@ package com.v2ray.ang.util
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import com.v2ray.ang.AppConfig
 import java.util.concurrent.ConcurrentHashMap
 
@@ -39,7 +40,12 @@ object PackageUidResolver {
         }
 
         return try {
-            val uid = context.packageManager.getPackageUid(packageName, 0).toString()
+            val uid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.packageManager.getPackageUid(packageName, 0)
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getApplicationInfo(packageName, 0).uid
+            }.toString()
             LogUtil.d(AppConfig.TAG, "Package: $packageName -> UID: $uid")
             uid
         } catch (_: PackageManager.NameNotFoundException) {
