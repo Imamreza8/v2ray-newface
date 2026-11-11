@@ -302,6 +302,7 @@
 
         <service
             android:name=".service.QSTileService"
+            tools:targetApi="24"
             android:exported="true"
             android:foregroundServiceType="specialUse"
             android:icon="@drawable/ic_stat_name"

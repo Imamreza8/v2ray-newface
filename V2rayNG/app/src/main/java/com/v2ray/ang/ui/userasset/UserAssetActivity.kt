@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
@@ -364,7 +365,7 @@ private fun UserAssetItem(
     onDeleteClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: java.util.Locale.getDefault()
     val propertiesText = if (fileMetadata != null) {
         val fileSize = Formatter.formatFileSize(context, fileMetadata.length)
         val skeleton = if (DateFormat.is24HourFormat(context)) "yMMMdHm" else "yMMMdhm"
