@@ -1,0 +1,168 @@
+# An explicitly separate compatibility build: the regular Newface build keeps its API-24 baseline.
+name: Build Android 6 Newface APK
+
+on:
+  push:
+    branches:
+      - arena/c15069a4-v2ray-newface
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout pinned source and submodules
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
+          cmdline-tools-version: '14742923'
+          packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
+      - name: Install the native compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --channel=0 --install 'ndk;29.0.14206865'
+          echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+      - name: Setup Java
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Setup the Go version pinned by the native core
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: AndroidLibXrayLite/go.mod
+          cache-dependency-path: AndroidLibXrayLite/go.sum
+      - name: Build the pinned Xray library for API 23
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule status AndroidLibXrayLite
+          cd AndroidLibXrayLite
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          go install golang.org/x/mobile/cmd/gomobile golang.org/x/mobile/cmd/gobind
+          gomobile init
+          set +e
+          gomobile bind -v -androidapi 23 -trimpath -ldflags='-s -w -buildid= -checklinkname=0' ./ 2>&1 | tee "$RUNNER_TEMP/android6-gomobile.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          if [ "$result" -ne 0 ]; then
+            tail -n 35 "$RUNNER_TEMP/android6-gomobile.log" | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$result"
+          fi
+          mkdir -p ../V2rayNG/app/libs
+          cp libv2ray.aar ../V2rayNG/app/libs/libv2ray.aar
+      - name: Build both HEV native binaries for API 23
+        shell: bash
+        env:
+          ANDROID_MIN_API: '23'
+        run: |
+          set -euo pipefail
+          bash compile-hevtun.sh
+          cp -r libs/* V2rayNG/app/libs/
+      - name: Prepare verified Gradle distribution
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd V2rayNG
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod 755 gradlew
+          distribution=$(sed -n 's#^distributionUrl=.*\(/gradle-[0-9.]*-bin.zip\)$#\1#p' gradle/wrapper/gradle-wrapper.properties)
+          distribution=${distribution#/}
+          version=${distribution#gradle-}
+          version=${version%-bin.zip}
+          [[ "$distribution" =~ ^gradle-[0-9.]+-bin\.zip$ ]]
+          asset=$(gh api "repos/gradle/gradle-distributions/releases/tags/v${version}" --jq ".assets[] | select(.name == \"$distribution\") | [.id, .digest] | @tsv")
+          unset GH_TOKEN
+          IFS=$'\t' read -r asset_id digest <<< "$asset"
+          [[ "$asset_id" =~ ^[0-9]+$ && "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          curl --fail --location --retry 3 -H 'Accept: application/octet-stream' \
+            "https://api.github.com/repos/gradle/gradle-distributions/releases/assets/$asset_id" -o "$RUNNER_TEMP/gradle-distribution.zip"
+          echo "${digest#sha256:}  $RUNNER_TEMP/gradle-distribution.zip" | sha256sum --check
+          sed -i '/^distributionUrl=/d' gradle/wrapper/gradle-wrapper.properties
+          printf 'distributionUrl=file\\:%s\n' "$RUNNER_TEMP/gradle-distribution.zip" >> gradle/wrapper/gradle-wrapper.properties
+      - name: Test and assemble Android 6 debug variants
+        shell: bash
+        run: |
+          set -o pipefail
+          cd V2rayNG
+          set +e
+          ./gradlew :app:testNewfaceDebugUnitTest :app:assembleNewfaceDebug :app:lintNewfaceDebug \
+            -PNEWFACE_ANDROID6=true '-PABI_FILTERS=armeabi-v7a;arm64-v8a;x86_64' \
+            -PNEWFACE_VERSION_CODE="${{ github.run_number }}" 2>&1 | tee "$RUNNER_TEMP/android6-gradle.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          if [ "$result" -ne 0 ]; then
+            grep -E '^(e: |error: |Execution failed for task|[[:space:]]*> |.*Error: )' "$RUNNER_TEMP/android6-gradle.log" | head -50 | while IFS= read -r line; do echo "::error::$line"; done
+            tail -n 30 "$RUNNER_TEMP/android6-gradle.log" | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$result"
+          fi
+      - name: Verify package, API level, signatures and native libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            mapfile -t apks < <(find V2rayNG/app/build/outputs/apk/newface/debug -name "*_${abi}.apk")
+            test "${#apks[@]}" -eq 1
+            badging=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "${apks[0]}")
+            printf '%s\n' "$badging" | grep -F "package: name='com.v2ray.ang.newface' versionCode='${{ github.run_number }}'"
+            printf '%s\n' "$badging" | grep -F "sdkVersion:'23'"
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --min-sdk-version 23 "${apks[0]}"
+            APK_PATH="${apks[0]}" APK_ABI="$abi" python3 - <<'PY'
+          import os
+          from zipfile import ZipFile
+          abi = os.environ['APK_ABI']
+          with ZipFile(os.environ['APK_PATH']) as apk:
+              names = set(apk.namelist())
+              required = {f'lib/{abi}/{name}' for name in ('libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so')}
+              missing = required - names
+              actual = {name.split('/')[1] for name in names if name.startswith('lib/') and len(name.split('/')) > 2}
+              if missing or actual != {abi}:
+                  raise SystemExit(f'ABI {abi}: missing {missing}, packaged ABIs {actual}')
+          PY
+          done
+      - name: Upload Android 6 debug APKs for testing only
+        uses: actions/upload-artifact@v7
+        with:
+          # The runner key is temporary: these APKs are not guaranteed to update future builds.
+          name: newface-android6-debug-testing-only
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/newface/debug/*.apk
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: newface-android6-debug-testing-only
+          path: android6-apks
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch on an API 23 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 23
+          target: default
+          arch: x86_64
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            mapfile -t apks < <(find android6-apks -name '*_x86_64.apk')
+            test "${#apks[@]}" -eq 1
+            adb install "${apks[0]}"
+            output=$(adb shell am start -W -n com.v2ray.ang.newface/com.v2ray.ang.ui.main.MainActivity)
+            printf '%s\n' "$output"
+            printf '%s\n' "$output" | grep -F 'Status: ok'
+            adb shell ps | grep -F 'com.v2ray.ang.newface'

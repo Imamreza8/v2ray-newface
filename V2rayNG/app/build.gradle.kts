@@ -61,6 +61,8 @@ android {
         }
         create("newface") {
             dimension = "distribution"
+            // The opt-in Android 6 build must also use API-23 native libraries; normal APKs remain API 24+.
+            if (project.findProperty("NEWFACE_ANDROID6") == "true") minSdk = 23
             applicationIdSuffix = ".newface"
             buildConfigField("String", "DISTRIBUTION", "\"Newface\"")
         }
