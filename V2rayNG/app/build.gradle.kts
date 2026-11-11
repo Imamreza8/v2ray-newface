@@ -228,8 +228,19 @@ dependencies {
     implementation(libs.lifecycle.runtime.ktx)
 
     // Background Task Libraries
-    implementation(libs.work.runtime.ktx)
-    implementation(libs.work.multiprocess)
+    if (project.findProperty("NEWFACE_ANDROID6") == "true") {
+        // WorkManager 2.12 requires API 24; 2.11.2 retains API 23 support.
+        implementation("androidx.work:work-runtime-ktx:2.11.2")
+        implementation("androidx.work:work-multiprocess:2.11.2")
+        constraints {
+            implementation("androidx.work:work-runtime") { version { strictly("2.11.2") } }
+            implementation("androidx.work:work-runtime-ktx") { version { strictly("2.11.2") } }
+            implementation("androidx.work:work-multiprocess") { version { strictly("2.11.2") } }
+        }
+    } else {
+        implementation(libs.work.runtime.ktx)
+        implementation(libs.work.multiprocess)
+    }
 
     // Reorderable list
     implementation(libs.reorderable)
