@@ -1,0 +1,53 @@
+name: Android 6 emulator diagnosis
+on:
+  push:
+    branches: [arena/c15069a4-v2ray-newface]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: newface-android6-debug-testing-only
+          path: android6-apks
+          run-id: 43022773183
+          github-token: ${{ github.token }}
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 23
+          target: default
+          arch: x86_64
+          disable-animations: true
+          script: |
+            set -eu
+            stage=setup
+            failed() {
+              result=$?
+              if [ "$result" -ne 0 ]; then
+                printf '::error::Emulator failure at stage: %s\n' "$stage"
+                details=$(adb logcat -d -s AndroidRuntime:E ActivityManager:W | tail -c 9000 || true)
+                details=$(printf '%s' "$details" | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g' -e 's/\r/%0D/g')
+                printf '::error::Android log: %s\n' "$details"
+              fi
+            }
+            trap failed EXIT
+            stage=find-apk
+            apk=$(find android6-apks -name '*_x86_64.apk')
+            test -n "$apk"
+            test "$(printf '%s\n' "$apk" | wc -l)" -eq 1
+            stage=install
+            adb install "$apk"
+            stage=start
+            output=$(adb shell am start -W -n com.v2ray.ang.newface/com.v2ray.ang.ui.main.MainActivity)
+            printf '%s\n' "$output"
+            printf '%s\n' "$output" | grep -F 'Status: ok'
+            stage=process
+            adb shell ps | grep -F 'com.v2ray.ang.newface'
