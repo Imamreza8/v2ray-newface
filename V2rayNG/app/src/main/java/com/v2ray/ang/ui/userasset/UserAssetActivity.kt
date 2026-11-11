@@ -365,7 +365,7 @@ private fun UserAssetItem(
     onDeleteClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: java.util.Locale.getDefault()
+    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: java.util.Locale.ROOT
     val propertiesText = if (fileMetadata != null) {
         val fileSize = Formatter.formatFileSize(context, fileMetadata.length)
         val skeleton = if (DateFormat.is24HourFormat(context)) "yMMMdHm" else "yMMMdhm"
