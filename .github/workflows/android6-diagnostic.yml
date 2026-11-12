@@ -9,6 +9,7 @@ jobs:
   emulator:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: newface-android6-debug-testing-only
@@ -26,28 +27,4 @@ jobs:
           target: default
           arch: x86_64
           disable-animations: true
-          script: |
-            set -eu
-            stage=setup
-            failed() {
-              result=$?
-              if [ "$result" -ne 0 ]; then
-                printf '::error::Emulator failure at stage: %s\n' "$stage"
-                details=$(adb logcat -d -s AndroidRuntime:E ActivityManager:W | tail -c 9000 || true)
-                details=$(printf '%s' "$details" | sed -e 's/%/%25/g' -e ':a;N;$!ba;s/\n/%0A/g' -e 's/\r/%0D/g')
-                printf '::error::Android log: %s\n' "$details"
-              fi
-            }
-            trap failed EXIT
-            stage=find-apk
-            apk=$(find android6-apks -name '*_x86_64.apk')
-            test -n "$apk"
-            test "$(printf '%s\n' "$apk" | wc -l)" -eq 1
-            stage=install
-            adb install "$apk"
-            stage=start
-            output=$(adb shell am start -W -n com.v2ray.ang.newface/com.v2ray.ang.ui.main.MainActivity)
-            printf '%s\n' "$output"
-            printf '%s\n' "$output" | grep -F 'Status: ok'
-            stage=process
-            adb shell ps | grep -F 'com.v2ray.ang.newface'
+          script: bash .github/scripts/android6-smoke.sh
