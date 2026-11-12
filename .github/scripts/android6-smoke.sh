@@ -25,3 +25,11 @@ printf '%s\n' "$output"
 printf '%s\n' "$output" | grep -F 'Status: ok'
 stage=process
 adb shell ps | grep -F 'com.v2ray.ang.newface'
+
+stage=core-asset-instrumentation
+mapfile -t tests < <(find android6-test-apk -name '*.apk')
+test "${#tests[@]}" -eq 1
+adb install "${tests[0]}"
+output=$(adb shell am instrument -w -r -e class com.v2ray.ang.GeoAssetsCoreTest com.v2ray.ang.newface.test/androidx.test.runner.AndroidJUnitRunner)
+printf '%s\n' "$output"
+printf '%s\n' "$output" | grep -E 'OK \(1 test\)'

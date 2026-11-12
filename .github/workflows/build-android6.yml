@@ -41,10 +41,17 @@ jobs:
           cache-dependency-path: AndroidLibXrayLite/go.sum
       - name: Build the pinned Xray library for API 23
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git submodule status AndroidLibXrayLite
           cd AndroidLibXrayLite
+          # The upstream build generates this required third asset before gomobile bind.
+          # Pin the Git blob instead of silently taking a changing latest release.
+          gh api repos/Loyalsoldier/geoip/git/blobs/15085ec3a1ea17832c1952ed3808cdd45134fcea --jq .content | base64 -d > assets/geoip-only-cn-private.dat
+          test "$(git hash-object assets/geoip-only-cn-private.dat)" = 15085ec3a1ea17832c1952ed3808cdd45134fcea
+          unset GH_TOKEN
           export PATH="$(go env GOPATH)/bin:$PATH"
           mobile_version=$(go list -m -f '{{.Version}}' golang.org/x/mobile)
           go install "golang.org/x/mobile/cmd/gomobile@$mobile_version" "golang.org/x/mobile/cmd/gobind@$mobile_version"
@@ -58,6 +65,7 @@ jobs:
             exit "$result"
           fi
           mkdir -p ../V2rayNG/app/libs
+          python3 ../.github/scripts/verify-geo-assets.py libv2ray.aar
           cp libv2ray.aar ../V2rayNG/app/libs/libv2ray.aar
       - name: Build both HEV native binaries for API 23
         shell: bash
@@ -96,7 +104,7 @@ jobs:
           set -o pipefail
           cd V2rayNG
           set +e
-          ./gradlew :app:testNewfaceDebugUnitTest :app:assembleNewfaceDebug :app:lintNewfaceDebug \
+          ./gradlew :app:testNewfaceDebugUnitTest :app:assembleNewfaceDebug :app:assembleNewfaceDebugAndroidTest :app:lintNewfaceDebug \
             -PNEWFACE_ANDROID6=true '-PABI_FILTERS=armeabi-v7a;arm64-v8a;x86_64' \
             -PNEWFACE_VERSION_CODE="${{ github.run_number }}" 2>&1 | tee "$RUNNER_TEMP/android6-gradle.log"
           result=${PIPESTATUS[0]}
@@ -132,6 +140,7 @@ jobs:
             printf '%s\n' "$badging" | grep -F "package: name='com.v2ray.ang.newface' versionCode='${{ github.run_number }}'"
             printf '%s\n' "$badging" | grep -F "sdkVersion:'23'"
             "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --min-sdk-version 23 "${apks[0]}"
+            python3 .github/scripts/verify-geo-assets.py "${apks[0]}"
             APK_PATH="${apks[0]}" APK_ABI="$abi" python3 - <<'PY'
           import os
           from zipfile import ZipFile
@@ -152,6 +161,13 @@ jobs:
           name: newface-android6-debug-testing-only
           if-no-files-found: error
           path: V2rayNG/app/build/outputs/apk/newface/debug/*.apk
+
+      - name: Upload Android 6 instrumentation APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: newface-android6-instrumentation
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/androidTest/newface/debug/*.apk
 
       - name: Upload Android 6 32-bit ARM test APK
         uses: actions/upload-artifact@v7
@@ -236,6 +252,7 @@ jobs:
             badging=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "${apks[0]}")
             printf '%s\n' "$badging" | grep -F "package: name='com.v2ray.ang.newface' versionCode='$RELEASE_CODE'"
             printf '%s\n' "$badging" | grep -F "sdkVersion:'23'"
+            python3 ../.github/scripts/verify-geo-assets.py "${apks[0]}"
             signature=$("$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --min-sdk-version 23 --print-certs "${apks[0]}")
             actual=$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]' | tr -d ':')
             [[ "$actual" == "$expected" ]] || { echo '::error::Unexpected signing certificate'; exit 1; }
@@ -275,6 +292,10 @@ jobs:
         with:
           name: newface-android6-debug-testing-only
           path: android6-apks
+      - uses: actions/download-artifact@v8
+        with:
+          name: newface-android6-instrumentation
+          path: android6-test-apk
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
