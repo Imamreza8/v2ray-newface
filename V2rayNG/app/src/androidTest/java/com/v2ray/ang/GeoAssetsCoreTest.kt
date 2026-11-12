@@ -2,30 +2,35 @@ package com.v2ray.ang
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.util.Utils
 import go.Seq
 import libv2ray.CoreCallbackHandler
 import libv2ray.Libv2ray
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 /** Exercises the native core's packaged-asset fallback, without a real server or VPN. */
 @RunWith(AndroidJUnit4::class)
 class GeoAssetsCoreTest {
     @Test
-    fun coreStartsWithPackagedPrivateCnAndGeoData() {
+    fun coreStartsWithInstalledPrivateCnAndGeoData() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         for (name in listOf("geoip.dat", "geosite.dat", "geoip-only-cn-private.dat")) {
             context.assets.open(name).use { assertTrue("Empty asset: $name", it.read() != -1) }
         }
 
-        // Isolate the test from any downloaded file: Xray must fall back to the APK assets.
-        val emptyDir = File(context.cacheDir, "geo-asset-core-test")
-        check(emptyDir.mkdirs() || emptyDir.isDirectory)
-        check(emptyDir.listFiles().orEmpty().isEmpty())
+        // This is a fresh emulator install. Match the app's real asset-copy path: Xray
+        // checks the filesystem for ext: rules before its bundled-asset fallback can run.
+        SettingsManager.initAssets(context, context.assets)
+        val assetDir = java.io.File(Utils.userAssetPath(context))
+        for (name in listOf("geoip.dat", "geosite.dat", "geoip-only-cn-private.dat")) {
+            val installed = java.io.File(assetDir, name)
+            assertTrue("Missing installed asset: $name", installed.isFile && installed.length() > 0)
+        }
         Seq.setContext(context.applicationContext)
-        Libv2ray.initCoreEnv(emptyDir.absolutePath, "")
+        Libv2ray.initCoreEnv(assetDir.absolutePath, "")
         val controller = Libv2ray.newCoreController(object : CoreCallbackHandler {
             override fun startup(): Long = 0
             override fun shutdown(): Long = 0
