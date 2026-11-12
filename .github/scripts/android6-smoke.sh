@@ -30,6 +30,15 @@ stage=core-asset-instrumentation
 mapfile -t tests < <(find android6-test-apk -name '*.apk')
 test "${#tests[@]}" -eq 1
 adb install "${tests[0]}"
-output=$(adb shell am instrument -w -r -e class com.v2ray.ang.GeoAssetsCoreTest com.v2ray.ang.newface.test/androidx.test.runner.AndroidJUnitRunner)
+set +e
+output=$(adb shell am instrument -w -r -e class com.v2ray.ang.GeoAssetsCoreTest com.v2ray.ang.newface.test/androidx.test.runner.AndroidJUnitRunner 2>&1)
+result=$?
+set -e
 printf '%s\n' "$output"
-printf '%s\n' "$output" | grep -E 'OK \(1 test\)'
+if (( result != 0 )) || ! printf '%s\n' "$output" | grep -Eq 'OK \(1 test\)'; then
+  details=${output//'%'/'%25'}
+  details=${details//$'\n'/'%0A'}
+  details=${details//$'\r'/'%0D'}
+  printf '::error::Instrumentation output: %s\n' "$details"
+  exit 1
+fi
