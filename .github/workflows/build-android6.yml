@@ -153,10 +153,24 @@ jobs:
           if-no-files-found: error
           path: V2rayNG/app/build/outputs/apk/newface/debug/*.apk
 
+      - name: Upload Android 6 32-bit ARM test APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: newface-android6-armeabi-v7a-debug-testing-only
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/newface/debug/*_armeabi-v7a.apk
+      - name: Upload Android 6 64-bit ARM test APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: newface-android6-arm64-v8a-debug-testing-only
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/newface/debug/*_arm64-v8a.apk
+
   emulator:
     needs: build
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: newface-android6-debug-testing-only
