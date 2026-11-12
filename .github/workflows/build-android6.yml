@@ -166,6 +166,106 @@ jobs:
           if-no-files-found: error
           path: V2rayNG/app/build/outputs/apk/newface/debug/*_arm64-v8a.apk
 
+      - name: Test Android 6 release build with a disposable key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/android6-ci-test.p12"
+          trap 'rm -f "$key"' EXIT
+          keytool -genkeypair -keystore "$key" -storetype PKCS12 \
+            -alias ci-test -storepass ci-test-password -keypass ci-test-password \
+            -keyalg RSA -keysize 2048 -validity 2 -dname 'CN=Temporary CI test'
+          cd V2rayNG
+          ./gradlew :app:assembleNewfaceRelease -PNEWFACE_ANDROID6=true \
+            '-PABI_FILTERS=armeabi-v7a;arm64-v8a' -PNEWFACE_VERSION_CODE="${{ github.run_number }}" \
+            -Pandroid.injected.signing.store.file="$key" \
+            -Pandroid.injected.signing.store.password=ci-test-password \
+            -Pandroid.injected.signing.key.alias=ci-test \
+            -Pandroid.injected.signing.key.password=ci-test-password
+          for abi in armeabi-v7a arm64-v8a; do
+            mapfile -t apks < <(find app/build/outputs/apk/newface/release -name "*_${abi}.apk")
+            test "${#apks[@]}" -eq 1
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --min-sdk-version 23 "${apks[0]}"
+            rm -f "${apks[0]}"
+          done
+
+      - name: Check permanent Android 6 signing prerequisites
+        id: signing
+        env:
+          STORE: ${{ secrets.NEWFACE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.NEWFACE_KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.NEWFACE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.NEWFACE_KEY_PASSWORD }}
+          CERT_SHA256: ${{ secrets.NEWFACE_CERT_SHA256 }}
+          RELEASE_CODE: ${{ vars.NEWFACE_ANDROID6_VERSION_CODE }}
+        run: |
+          if [[ -n "$STORE" && -n "$STORE_PASSWORD" && -n "$ALIAS" && -n "$KEY_PASSWORD" && -n "$CERT_SHA256" && "$RELEASE_CODE" =~ ^[0-9]+$ ]]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::No signed Android 6 release: configure the five Newface signing secrets and the NEWFACE_ANDROID6_VERSION_CODE repository variable.'
+          fi
+      - name: Build and verify Android 6 permanently signed APKs
+        if: steps.signing.outputs.available == 'true'
+        env:
+          STORE: ${{ secrets.NEWFACE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.NEWFACE_KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.NEWFACE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.NEWFACE_KEY_PASSWORD }}
+          CERT_SHA256: ${{ secrets.NEWFACE_CERT_SHA256 }}
+          RELEASE_CODE: ${{ vars.NEWFACE_ANDROID6_VERSION_CODE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/newface-signing.p12"
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$STORE" | base64 --decode > "$key"
+          cd V2rayNG
+          ./gradlew :app:assembleNewfaceRelease -PNEWFACE_ANDROID6=true \
+            '-PABI_FILTERS=armeabi-v7a;arm64-v8a' -PNEWFACE_VERSION_CODE="$RELEASE_CODE" \
+            -Pandroid.injected.signing.store.file="$key" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+          expected=$(printf '%s' "$CERT_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')
+          [[ "$expected" =~ ^[a-f0-9]{64}$ ]]
+          for abi in armeabi-v7a arm64-v8a; do
+            mapfile -t apks < <(find app/build/outputs/apk/newface/release -name "*_${abi}.apk")
+            test "${#apks[@]}" -eq 1
+            badging=$("$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "${apks[0]}")
+            printf '%s\n' "$badging" | grep -F "package: name='com.v2ray.ang.newface' versionCode='$RELEASE_CODE'"
+            printf '%s\n' "$badging" | grep -F "sdkVersion:'23'"
+            signature=$("$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --min-sdk-version 23 --print-certs "${apks[0]}")
+            actual=$(printf '%s\n' "$signature" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]' | tr -d ':')
+            [[ "$actual" == "$expected" ]] || { echo '::error::Unexpected signing certificate'; exit 1; }
+            APK_PATH="${apks[0]}" APK_ABI="$abi" python3 - <<'PYCODE'
+          import os
+          from zipfile import ZipFile
+          abi = os.environ['APK_ABI']
+          with ZipFile(os.environ['APK_PATH']) as apk:
+              names = set(apk.namelist())
+              required = {f'lib/{abi}/{name}' for name in ('libgojni.so', 'libhev-socks5-tunnel.so', 'libhevsockstun.so')}
+              actual = {name.split('/')[1] for name in names if name.startswith('lib/') and len(name.split('/')) > 2}
+              if required - names or actual != {abi}:
+                  raise SystemExit(f'ABI {abi}: missing {required - names}, packaged ABIs {actual}')
+          PYCODE
+          done
+      - name: Upload signed Android 6 32-bit ARM APK
+        if: steps.signing.outputs.available == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: newface-android6-armeabi-v7a-signed
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/newface/release/*_armeabi-v7a.apk
+      - name: Upload signed Android 6 64-bit ARM APK
+        if: steps.signing.outputs.available == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: newface-android6-arm64-v8a-signed
+          if-no-files-found: error
+          path: V2rayNG/app/build/outputs/apk/newface/release/*_arm64-v8a.apk
+
   emulator:
     needs: build
     runs-on: ubuntu-24.04
